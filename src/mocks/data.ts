@@ -27,7 +27,7 @@ export const mockProductCategories: ProductCategory[] = [
   { id: 'pc3', name: 'Matériel', color: '#3b82f6', description: 'Équipements et matériel physique' },
   { id: 'pc4', name: 'Travaux', color: '#8b5cf6', description: 'Travaux et installations' },
   { id: 'pc5', name: 'Conseil', color: '#10b981', description: 'Consultation et audit' },
-  { id: 'pc6', name: 'Formation', color: '#ec4899', description: 'Formations et coaching' },
+  { id: 'pc6', name: 'Formations', color: '#ec4899', description: 'Formations et coaching' },
 ];
 
 export const mockClientGroups: ClientGroup[] = [
