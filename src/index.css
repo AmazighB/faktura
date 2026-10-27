@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { @apply border-gray-200 dark:border-gray-800; }
+  html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+  body { @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100; letter-spacing: -0.006em; }
+  h1, h2, h3 { letter-spacing: -0.018em; }
+  ::selection { @apply bg-accent-500/20; }
+}
+
+@layer components {
+  /* Montants : chiffres tabulaires pour aligner les colonnes */
+  .num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum', 'zero'; }
+  /* Surface standard */
+  .surface { @apply rounded-xl border border-gray-200 bg-white shadow-card dark:border-gray-800 dark:bg-gray-900; }
+  /* Libellé discret (casse normale, pas de capitales) */
+  .label-quiet { @apply text-[13px] font-medium text-gray-500 dark:text-gray-400; }
+  /* Raccourci clavier */
+  .kbd { @apply inline-flex h-5 min-w-[20px] items-center justify-center rounded border border-gray-200 bg-white px-1 font-mono text-[11px] text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400; }
+}
+
+@layer utilities {
+  .scrollbar-thin { scrollbar-width: thin; scrollbar-color: rgb(154 162 175 / 0.6) transparent; }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { @apply rounded-full bg-gray-300 dark:bg-gray-700; }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover { @apply bg-gray-400 dark:bg-gray-600; }
+}
+
+*:focus-visible { @apply outline-none ring-2 ring-accent-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-950; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+@media print {
+  aside, header, .no-print { display: none !important; }
+  main { overflow: visible !important; background: white !important; }
+  #document-preview { box-shadow: none !important; max-width: none !important; width: 100% !important; padding: 0 !important; }
+  body { background: white !important; }
+}

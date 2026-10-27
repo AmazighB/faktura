@@ -1,0 +1,81 @@
+export type Locale = 'fr' | 'ar' | 'en';
+
+type Dict = Record<string, string>;
+
+const fr: Dict = {
+  'app.name': 'Factura',
+  'nav.dashboard': 'Tableau de bord',
+  'nav.clients': 'Clients',
+  'nav.products': 'Produits & Services',
+  'nav.sales': 'Ventes',
+  'nav.quotes': 'Devis',
+  'nav.invoices': 'Factures',
+  'nav.payments': 'Paiements',
+  'nav.expenses': 'Dépenses',
+  'nav.suppliers': 'Fournisseurs',
+  'nav.reports': 'Rapports',
+  'nav.settings': 'Paramètres',
+  'nav.administration': 'Administration',
+  'action.new': 'Nouveau',
+  'action.edit': 'Modifier',
+  'action.delete': 'Supprimer',
+  'action.save': 'Enregistrer',
+  'action.cancel': 'Annuler',
+  'action.search': 'Rechercher',
+  'action.filter': 'Filtrer',
+  'action.export': 'Exporter',
+  'action.print': 'Imprimer',
+  'action.duplicate': 'Dupliquer',
+  'action.back': 'Retour',
+  'action.confirm': 'Confirmer',
+  'action.close': 'Fermer',
+  'state.loading': 'Chargement...',
+  'state.empty': 'Aucune donnée',
+  'state.error': 'Une erreur est survenue',
+  'state.saved': 'Enregistré avec succès',
+  'state.created': 'Créé avec succès',
+  'state.updated': 'Modifié avec succès',
+  'state.deleted': 'Supprimé avec succès',
+};
+
+const en: Dict = {
+  'app.name': 'Factura',
+  'nav.dashboard': 'Dashboard',
+  'nav.clients': 'Clients',
+  'nav.products': 'Products & Services',
+  'nav.sales': 'Sales',
+  'nav.quotes': 'Quotes',
+  'nav.invoices': 'Invoices',
+  'nav.payments': 'Payments',
+  'nav.expenses': 'Expenses',
+  'nav.suppliers': 'Suppliers',
+  'nav.reports': 'Reports',
+  'nav.settings': 'Settings',
+  'nav.administration': 'Administration',
+  'action.new': 'New',
+  'action.edit': 'Edit',
+  'action.delete': 'Delete',
+  'action.save': 'Save',
+  'action.cancel': 'Cancel',
+  'action.search': 'Search',
+  'action.filter': 'Filter',
+  'action.export': 'Export',
+  'action.print': 'Print',
+  'action.duplicate': 'Duplicate',
+  'action.back': 'Back',
+  'action.confirm': 'Confirm',
+  'action.close': 'Close',
+  'state.loading': 'Loading...',
+  'state.empty': 'No data',
+  'state.error': 'An error occurred',
+  'state.saved': 'Saved successfully',
+  'state.created': 'Created successfully',
+  'state.updated': 'Updated successfully',
+  'state.deleted': 'Deleted successfully',
+};
+
+const dictionaries: Record<Locale, Dict> = { fr, en, ar: fr };
+
+export function t(key: string, locale: Locale = 'fr'): string {
+  return dictionaries[locale]?.[key] ?? dictionaries.fr[key] ?? key;
+}
