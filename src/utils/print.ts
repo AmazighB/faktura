@@ -88,6 +88,10 @@ export function printElement(elementId: string, title: string) {
     #document-preview .rounded-lg { border-radius: 8px; }
     #document-preview .h-10 { height: 40px; }
     #document-preview .w-10 { width: 40px; }
+    #document-preview .h-12 { height: 48px; }
+    #document-preview .max-w-\[140px\] { max-width: 140px; }
+    #document-preview .object-contain { object-fit: contain; }
+    #document-preview img { max-height: 48px; }
     #document-preview .justify-center { justify-content: center; }
     #document-preview .justify-end { justify-content: flex-end; }
     #document-preview .gap-2 { gap: 8px; }
@@ -100,6 +104,7 @@ export function printElement(elementId: string, title: string) {
     #document-preview .text-center { text-align: center; }
     #document-preview .flex-1 { flex: 1; }
     #document-preview .min-w-\[800px\] { min-width: 800px; }
+    #document-preview .num-amount { font-family: 'Geist Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
   `;
 
   printDocument(title, el.outerHTML, docStyles);

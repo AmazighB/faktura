@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Save, Building2, FileText, CreditCard, Globe, Package, RefreshCw, CheckCircle2, AlertCircle, Mail, Server, Hash, Percent, LayoutGrid, ListChecks, Tag, Plus, Trash2, X } from 'lucide-react';
+import { Save, Building2, FileText, CreditCard, Globe, Package, RefreshCw, CheckCircle2, AlertCircle, Mail, Server, Hash, Percent, LayoutGrid, ListChecks, Tag, Plus, Trash2, X, ChevronDown, RotateCcw, Upload, ImageIcon } from 'lucide-react';
 import { PageHeader, PageContent } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -11,7 +11,7 @@ import { useToast } from '@/app/providers/ToastProvider';
 import { useApp } from '@/app/providers/AppProvider';
 import { cn } from '@/utils/cn';
 import { ALL_MODULES, loadModuleConfig, saveModuleConfig, type ModuleConfig } from '@/utils/modules';
-import type { Settings, PaymentMethod, SmtpConfig, ExpenseCategoryConfig } from '@/types';
+import type { Settings, PaymentMethod, SmtpConfig, ExpenseCategoryConfig, EmailTemplateKey, EmailTemplate } from '@/types';
 
 const sections = [
   { key: 'company', label: 'Entreprise', icon: Building2 },
@@ -35,6 +35,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [smtpTested, setSmtpTested] = useState(false);
   const [smtpTesting, setSmtpTesting] = useState(false);
+  const [openTpl, setOpenTpl] = useState<string | null>(null);
 
   const { data: settings, reload } = useAsync(() => services.settings.get(), []);
   const [moduleConfig, setModuleConfig] = useState<ModuleConfig>(() => loadModuleConfig());
@@ -59,6 +60,8 @@ export default function SettingsPage() {
   const updateCompany = <K extends keyof Settings['company']>(key: K, value: Settings['company'][K]) => setForm((f) => ({ ...f!, company: { ...f!.company, [key]: value } }));
   const updateNumbering = <K extends keyof Settings['numbering']>(key: K, value: Settings['numbering'][K]) => setForm((f) => ({ ...f!, numbering: { ...f!.numbering, [key]: value } }));
   const updateSmtp = <K extends keyof SmtpConfig>(key: K, value: SmtpConfig[K]) => setForm((f) => ({ ...f!, smtp: { ...f!.smtp, [key]: value } }));
+  const updateEmailTemplate = (key: EmailTemplateKey, field: keyof EmailTemplate, value: string | boolean) =>
+    setForm((f) => ({ ...f!, emailTemplates: { ...f!.emailTemplates, [key]: { ...f!.emailTemplates[key], [field]: value } } }));
 
   const updateDocFields = (docType: 'invoice' | 'quote', key: string, field: 'enabled' | 'required', value: boolean) =>
     setForm((f) => {
@@ -99,6 +102,13 @@ export default function SettingsPage() {
   const handleCheckUpdate = () => {
     setCheckingUpdate(true);
     setTimeout(() => { setCheckingUpdate(false); push('info', 'À jour', 'Vous utilisez la dernière version (1.0.0)'); }, 1500);
+  };
+
+  const handleLogoUpload = (file: File) => {
+    if (file.size > 500_000) { push('error', 'Fichier trop volumineux', 'Le logo doit faire moins de 500 Ko'); return; }
+    const reader = new FileReader();
+    reader.onload = () => { updateCompany('logo', reader.result as string); push('success', 'Logo importé'); };
+    reader.readAsDataURL(file);
   };
 
   const pmLabels: Record<PaymentMethod, string> = { especes: 'Espèces', virement: 'Virement', carte: 'Carte', cheque: 'Chèque', en_ligne: 'Paiement en ligne', autre: 'Autre' };
@@ -150,6 +160,28 @@ export default function SettingsPage() {
                       <Field label="AI"><Input className={compactInput} value={form.company.ai} onChange={(e) => updateCompany('ai', e.target.value)} /></Field>
                     </div>
                     <Field label="Coordonnées bancaires"><Textarea className="min-h-[44px] text-sm" value={form.company.bankDetails} onChange={(e) => updateCompany('bankDetails', e.target.value)} /></Field>
+                  </div>
+                </Card>
+                <Card className="p-4 md:col-span-2">
+                  <div className="mb-3 flex items-center gap-2"><ImageIcon className="h-4 w-4 text-gray-400" /><h3 className="text-sm font-semibold">Logo de l'entreprise</h3></div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
+                      {form.company.logo
+                        ? <img src={form.company.logo} alt="Logo" className="h-full w-full object-contain" />
+                        : <ImageIcon className="h-6 w-6 text-gray-300" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Le logo apparaît sur les factures, devis et avoirs. Format PNG ou JPG, 500 Ko max.</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <label>
+                          <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ''; }} />
+                          <span className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-accent-400 hover:text-accent-600 dark:border-gray-800 dark:text-gray-300"><Upload className="h-3.5 w-3.5" /> Importer</span>
+                        </label>
+                        {form.company.logo && (
+                          <button onClick={() => updateCompany('logo', '')} className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-red-400 hover:text-red-600 dark:border-gray-800 dark:text-gray-300"><Trash2 className="h-3.5 w-3.5" /> Supprimer</button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </Card>
               </div>
@@ -365,6 +397,47 @@ export default function SettingsPage() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">Gmail: smtp.gmail.com (587, TLS) avec mot de passe d'application. Outlook: smtp.office365.com (587, TLS).</p>
                   </div>
                 </Card>
+
+                {/* Email templates */}
+                <Card className="p-4">
+                  <div className="mb-3 flex items-center gap-2"><FileText className="h-4 w-4 text-gray-400" /><h3 className="text-sm font-semibold">Modèles d'emails</h3></div>
+                  <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+                    Personnalisez les emails envoyés automatiquement. Variables disponibles : {'{{clientName}}'}, {'{{companyName}}'}, {'{{number}}'}, {'{{amount}}'}, {'{{dueDate}}'}, {'{{expiryDate}}'}, {'{{reason}}'}, {'{{invoiceNumber}}'}.
+                  </p>
+                  <div className="space-y-3">
+                    {EMAIL_TEMPLATE_META.map((tpl) => {
+                      const value = form.emailTemplates[tpl.key];
+                      const isOpen = openTpl === tpl.key;
+                      return (
+                        <div key={tpl.key} className="rounded-lg border border-gray-200 dark:border-gray-800">
+                          <div className="flex items-center justify-between px-3 py-2.5">
+                            <button onClick={() => setOpenTpl(isOpen ? null : tpl.key)} className="flex flex-1 items-center gap-2 text-left">
+                              <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform', !isOpen && '-rotate-90')} />
+                              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{tpl.label}</span>
+                              <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-medium', value.enabled ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-100 text-gray-400 dark:bg-gray-800')}>
+                                {value.enabled ? 'Actif' : 'Inactif'}
+                              </span>
+                            </button>
+                            <Switch checked={value.enabled} onChange={(v) => updateEmailTemplate(tpl.key, 'enabled', v)} />
+                          </div>
+                          {isOpen && (
+                            <div className="space-y-2.5 border-t border-gray-200 p-3 dark:border-gray-800">
+                              <Field label="Objet">
+                                <Input className={compactInput} value={value.subject} onChange={(e) => updateEmailTemplate(tpl.key, 'subject', e.target.value)} />
+                              </Field>
+                              <Field label="Corps de l'email">
+                                <Textarea className="min-h-[120px] text-sm font-mono" value={value.body} onChange={(e) => updateEmailTemplate(tpl.key, 'body', e.target.value)} />
+                              </Field>
+                              <Button variant="ghost" size="sm" onClick={() => updateEmailTemplate(tpl.key, 'body', EMAIL_TEMPLATE_META.find((t) => t.key === tpl.key)!.defaultBody)}>
+                                <RotateCcw className="h-3.5 w-3.5" /> Réinitialiser
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
               </div>
             )}
 
@@ -497,3 +570,36 @@ function ReasonAdder({ onAdd }: { onAdd: (reason: string) => void }) {
     </div>
   );
 }
+
+const EMAIL_TEMPLATE_META: { key: EmailTemplateKey; label: string; defaultBody: string }[] = [
+  {
+    key: 'invoiceSent',
+    label: 'Facture envoyée',
+    defaultBody: 'Bonjour {{clientName}},\n\nVeuillez trouver ci-joint la facture {{number}} d\'un montant de {{amount}}.\nDate d\'échéance : {{dueDate}}.\n\nMerci de votre confiance.\n{{companyName}}',
+  },
+  {
+    key: 'invoiceReminder',
+    label: 'Rappel de facture',
+    defaultBody: 'Bonjour {{clientName}},\n\nNous vous rappelons que la facture {{number}} d\'un montant de {{amount}} arrive à échéance le {{dueDate}}.\n\nMerci de procéder au règlement dans les meilleurs délais.\n{{companyName}}',
+  },
+  {
+    key: 'quoteSent',
+    label: 'Devis envoyé',
+    defaultBody: 'Bonjour {{clientName}},\n\nVeuillez trouver ci-joint notre devis {{number}} d\'un montant de {{amount}}.\nCe devis est valable jusqu\'au {{expiryDate}}.\n\nNous restons à votre disposition pour toute question.\n{{companyName}}',
+  },
+  {
+    key: 'paymentReceived',
+    label: 'Paiement reçu',
+    defaultBody: 'Bonjour {{clientName}},\n\nNous accusons réception de votre paiement de {{amount}} concernant la facture {{number}}.\n\nMerci pour votre confiance.\n{{companyName}}',
+  },
+  {
+    key: 'creditNoteIssued',
+    label: 'Avoir émis',
+    defaultBody: 'Bonjour {{clientName}},\n\nNous vous informons qu\'un avoir {{number}} d\'un montant de {{amount}} a été émis suite à : {{reason}}.\n\nCet avoir est rattaché à la facture {{invoiceNumber}}.\n{{companyName}}',
+  },
+  {
+    key: 'paymentOverdue',
+    label: 'Paiement en retard',
+    defaultBody: 'Bonjour {{clientName}},\n\nMalgré nos précédents rappels, la facture {{number}} d\'un montant de {{amount}} reste impayée. Elle était due le {{dueDate}}.\n\nNous vous prions de bien vouloir régulariser cette situation dans les plus brefs délais.\n\nCordialement,\n{{companyName}}',
+  },
+];

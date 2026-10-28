@@ -49,9 +49,13 @@ export function DocumentPreview({
       <div className="flex items-start justify-between border-b border-gray-200 pb-6">
         <div>
           <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-600 text-white">
-              <span className="text-lg font-bold">F</span>
-            </div>
+            {company.logo ? (
+              <img src={company.logo} alt={company.name} className="h-12 max-w-[140px] object-contain" />
+            ) : (
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-600 text-white">
+                <span className="text-lg font-bold">F</span>
+              </div>
+            )}
             <div>
               <p className="text-lg font-bold text-gray-900">{company.name}</p>
               <p className="text-xs text-gray-500">{company.address}</p>
@@ -107,10 +111,10 @@ export function DocumentPreview({
                 <p className="font-medium text-gray-800">{item.designation}</p>
                 {item.description && <p className="text-xs text-gray-500">{item.description}</p>}
               </td>
-              <td className="py-3 pr-3 text-right text-gray-700">{item.quantity} {item.unit}</td>
-              <td className="py-3 pr-3 text-right text-gray-700">{formatCurrency(item.unitPrice, currency)}</td>
-              <td className="py-3 pr-3 text-right text-gray-700">{item.vatRate}%</td>
-              <td className="py-3 text-right font-medium text-gray-900">{formatCurrency(lineHT(item), currency)}</td>
+              <td className="py-3 pr-3 text-right text-gray-700 num-amount">{item.quantity} {item.unit}</td>
+              <td className="py-3 pr-3 text-right text-gray-700 num-amount">{formatCurrency(item.unitPrice, currency)}</td>
+              <td className="py-3 pr-3 text-right text-gray-700 num-amount">{item.vatRate}%</td>
+              <td className="py-3 text-right font-medium text-gray-900 num-amount">{formatCurrency(lineHT(item), currency)}</td>
             </tr>
           ))}
         </tbody>
@@ -121,35 +125,35 @@ export function DocumentPreview({
         <div className="w-72 space-y-1.5 text-sm">
           <div className="flex justify-between text-gray-600">
             <span>Sous-total</span>
-            <span>{formatCurrency(totals.subtotal, currency)}</span>
+            <span className="num-amount">{formatCurrency(totals.subtotal, currency)}</span>
           </div>
           {totals.discountAmount > 0 && (
             <div className="flex justify-between text-gray-600">
               <span>Remise</span>
-              <span>-{formatCurrency(totals.discountAmount, currency)}</span>
+              <span className="num-amount">-{formatCurrency(totals.discountAmount, currency)}</span>
             </div>
           )}
           <div className="flex justify-between text-gray-600">
             <span>Total HT</span>
-            <span>{formatCurrency(totals.netHT, currency)}</span>
+            <span className="num-amount">{formatCurrency(totals.netHT, currency)}</span>
           </div>
           <div className="flex justify-between text-gray-600">
             <span>TVA</span>
-            <span>{formatCurrency(totals.vatAmount, currency)}</span>
+            <span className="num-amount">{formatCurrency(totals.vatAmount, currency)}</span>
           </div>
           <div className="flex justify-between border-t border-gray-300 pt-2 text-base font-bold text-gray-900">
             <span>Total TTC</span>
-            <span>{formatCurrency(totals.totalTTC, currency)}</span>
+            <span className="num-amount">{formatCurrency(totals.totalTTC, currency)}</span>
           </div>
           {paidAmount > 0 && type !== 'recu' && (
             <>
               <div className="flex justify-between text-gray-600">
                 <span>Payé</span>
-                <span>{formatCurrency(paidAmount, currency)}</span>
+                <span className="num-amount">{formatCurrency(paidAmount, currency)}</span>
               </div>
               <div className="flex justify-between font-semibold text-gray-900">
                 <span>Reste à payer</span>
-                <span>{formatCurrency(remaining, currency)}</span>
+                <span className="num-amount">{formatCurrency(remaining, currency)}</span>
               </div>
             </>
           )}

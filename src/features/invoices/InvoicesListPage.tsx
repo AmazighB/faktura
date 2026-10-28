@@ -39,7 +39,10 @@ export default function InvoicesListPage() {
 
   const clientName = (id: string) => (clients ?? []).find((c) => c.id === id)?.name ?? '—';
 
+  const dateRangeError = dateFrom && dateTo && dateFrom > dateTo;
+
   const filtered = useMemo(() => {
+    if (dateRangeError) return [];
     return (invoices ?? []).filter((i) => {
       if (statusFilter !== 'all' && i.status !== statusFilter) return false;
       if (clientFilter !== 'all' && i.clientId !== clientFilter) return false;
@@ -50,7 +53,7 @@ export default function InvoicesListPage() {
       if (maxAmount && total > Number(maxAmount)) return false;
       return true;
     });
-  }, [invoices, statusFilter, clientFilter, dateFrom, dateTo, minAmount, maxAmount]);
+  }, [invoices, statusFilter, clientFilter, dateFrom, dateTo, minAmount, maxAmount, dateRangeError]);
 
   const hasActiveFilters = clientFilter !== 'all' || dateFrom || dateTo || minAmount || maxAmount;
 
@@ -79,12 +82,12 @@ export default function InvoicesListPage() {
     { key: 'client', header: 'Client', render: (i) => <span className="text-gray-700 dark:text-gray-300">{clientName(i.clientId)}</span> },
     { key: 'date', header: 'Date', sortable: true, sortValue: (i) => i.date, render: (i) => formatDate(i.date) },
     { key: 'dueDate', header: 'Échéance', render: (i) => <span className="text-gray-600">{formatDate(i.dueDate)}</span> },
-    { key: 'total', header: 'Total TTC', align: 'right', sortable: true, sortValue: (i) => computeTotals(i.items).totalTTC, render: (i) => <span className="font-medium">{formatCurrency(computeTotals(i.items).totalTTC)}</span> },
+    { key: 'total', header: 'Total TTC', align: 'right', sortable: true, sortValue: (i) => computeTotals(i.items).totalTTC, render: (i) => <span className="num-amount font-medium">{formatCurrency(computeTotals(i.items).totalTTC)}</span> },
     {
       key: 'paid',
       header: 'Payé',
       align: 'right',
-      render: (i) => <span className={(i.paidAmount + (i.creditNotesApplied ?? 0)) > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}>{formatCurrency(i.paidAmount + (i.creditNotesApplied ?? 0))}</span>,
+      render: (i) => <span className={`num-amount ${(i.paidAmount + (i.creditNotesApplied ?? 0)) > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>{formatCurrency(i.paidAmount + (i.creditNotesApplied ?? 0))}</span>,
     },
     { key: 'status', header: 'Statut', render: (i) => <InvoiceStatusBadge status={i.status} /> },
     {
@@ -162,7 +165,8 @@ export default function InvoicesListPage() {
             />
           </div>
           {showFilters && (
-            <div className="grid grid-cols-1 gap-3 border-b border-gray-200 p-3 dark:border-gray-800 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="space-y-3 border-b border-gray-200 p-3 dark:border-gray-800">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               <Field label="Client">
                 <Select value={clientFilter} onChange={(e) => setClientFilter(e.target.value)}>
                   <option value="all">Tous les clients</option>
@@ -174,11 +178,21 @@ export default function InvoicesListPage() {
               <Field label="Montant min"><Input type="number" value={minAmount} onChange={(e) => setMinAmount(e.target.value)} placeholder="0" /></Field>
               <Field label="Montant max"><Input type="number" value={maxAmount} onChange={(e) => setMaxAmount(e.target.value)} placeholder="∞" /></Field>
             </div>
+            {dateRangeError && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">La date « du » est postérieure à la date « au ». Aucune facture ne correspond à cette période.</p>
+            )}
+            </div>
           )}
           {loading ? (
             <SkeletonRows />
           ) : error ? (
             <ErrorState message={error} onRetry={reload} />
+          ) : dateRangeError ? (
+            <EmptyState
+              icon={Receipt}
+              title="Période invalide"
+              description="La date « du » est postérieure à la date « au ». Corrigez les dates pour afficher vos factures."
+            />
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={Receipt}

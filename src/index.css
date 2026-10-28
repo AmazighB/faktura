@@ -18,6 +18,8 @@
 @layer components {
   /* Montants : chiffres tabulaires pour aligner les colonnes */
   .num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum', 'zero'; }
+  /* Montants financiers : police monospace pour hiérarchie visuelle des chiffres */
+  .num-amount { font-family: 'Geist Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; font-feature-settings: 'tnum', 'zero'; letter-spacing: -0.02em; }
   /* Surface standard */
   .surface { @apply rounded-xl border border-gray-200 bg-white shadow-card dark:border-gray-800 dark:bg-gray-900; }
   /* Libellé discret (casse normale, pas de capitales) */

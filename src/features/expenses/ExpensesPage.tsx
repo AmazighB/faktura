@@ -61,7 +61,10 @@ export default function ExpensesPage() {
   const catLabel = (cat: string) => expenseCatConfig.labelMap[cat] ?? cat;
   const catColor = (cat: string) => expenseCatConfig.colorMap[cat] ?? 'bg-gray-400';
 
+  const dateRangeError = dateFrom && dateTo && dateFrom > dateTo;
+
   const filtered = useMemo(() => {
+    if (dateRangeError) return [];
     return (expenses ?? []).filter((e) => {
       if (categoryFilter !== 'all' && e.category !== categoryFilter) return false;
       if (supplierFilter !== 'all') {
@@ -74,7 +77,7 @@ export default function ExpensesPage() {
       if (maxAmount && e.amountTTC > Number(maxAmount)) return false;
       return true;
     });
-  }, [expenses, categoryFilter, supplierFilter, dateFrom, dateTo, minAmount, maxAmount]);
+  }, [expenses, categoryFilter, supplierFilter, dateFrom, dateTo, minAmount, maxAmount, dateRangeError]);
 
   const hasActiveFilters = categoryFilter !== 'all' || supplierFilter !== 'all' || dateFrom || dateTo || minAmount || maxAmount;
   const clearFilters = () => { setCategoryFilter('all'); setSupplierFilter('all'); setDateFrom(''); setDateTo(''); setMinAmount(''); setMaxAmount(''); };
@@ -126,8 +129,8 @@ export default function ExpensesPage() {
       ),
     },
     { key: 'description', header: 'Description', render: (e) => <span className="text-gray-700 dark:text-gray-300">{e.description}</span> },
-    { key: 'amountHT', header: 'HT', align: 'right', render: (e) => formatCurrency(e.amountHT, currency) },
-    { key: 'amountTTC', header: 'TTC', align: 'right', sortable: true, sortValue: (e) => e.amountTTC, render: (e) => <span className="font-medium">{formatCurrency(e.amountTTC, currency)}</span> },
+    { key: 'amountHT', header: 'HT', align: 'right', render: (e) => <span className="num-amount">{formatCurrency(e.amountHT, currency)}</span> },
+    { key: 'amountTTC', header: 'TTC', align: 'right', sortable: true, sortValue: (e) => e.amountTTC, render: (e) => <span className="num-amount font-medium">{formatCurrency(e.amountTTC, currency)}</span> },
     {
       key: 'actions', header: '', align: 'right',
       render: (e) => (
@@ -166,7 +169,7 @@ export default function ExpensesPage() {
           <Card className="mb-5 p-5">
             <div className="flex items-baseline justify-between gap-3">
               <p className="label-quiet">Où part l'argent</p>
-              <p className="num text-sm font-semibold">{formatCurrency(totalExpenses, currency)}</p>
+              <p className="num-amount text-sm font-semibold">{formatCurrency(totalExpenses, currency)}</p>
             </div>
             <div className="mt-3 flex h-2.5 gap-0.5 overflow-hidden rounded-full" role="img" aria-label="Répartition des dépenses par catégorie">
               {byCategory.map(([cat, amount]) => (
@@ -197,7 +200,8 @@ export default function ExpensesPage() {
             )}
           </div>
           {showFilters && (
-            <div className="grid grid-cols-1 gap-3 border-b border-gray-200 p-3 dark:border-gray-800 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="space-y-3 border-b border-gray-200 p-3 dark:border-gray-800">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               <Field label="Catégorie">
                 <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
                   <option value="all">Toutes</option>
@@ -216,11 +220,17 @@ export default function ExpensesPage() {
               <Field label="Montant min"><Input type="number" value={minAmount} onChange={(e) => setMinAmount(e.target.value)} placeholder="0" /></Field>
               <Field label="Montant max"><Input type="number" value={maxAmount} onChange={(e) => setMaxAmount(e.target.value)} placeholder="∞" /></Field>
             </div>
+            {dateRangeError && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">La date « du » est postérieure à la date « au ». Aucune dépense ne correspond à cette période.</p>
+            )}
+            </div>
           )}
           {loading ? (
             <SkeletonRows />
           ) : error ? (
             <ErrorState message={error} onRetry={reload} />
+          ) : dateRangeError ? (
+            <EmptyState icon={Wallet} title="Période invalide" description="La date « du » est postérieure à la date « au ». Corrigez les dates pour afficher vos dépenses." />
           ) : filtered.length === 0 ? (
             <EmptyState icon={Wallet} title="Aucune dépense" description="Enregistrez vos dépenses" action={<Button onClick={openNew}><Plus className="h-4 w-4" /> Ajouter</Button>} />
           ) : (

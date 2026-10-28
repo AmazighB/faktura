@@ -253,6 +253,22 @@ export interface SmtpConfig {
   enabled: boolean;
 }
 
+export type EmailTemplateKey =
+  | 'invoiceSent'
+  | 'invoiceReminder'
+  | 'quoteSent'
+  | 'paymentReceived'
+  | 'creditNoteIssued'
+  | 'paymentOverdue';
+
+export interface EmailTemplate {
+  subject: string;
+  body: string;
+  enabled: boolean;
+}
+
+export type EmailTemplates = Record<EmailTemplateKey, EmailTemplate>;
+
 export interface DocumentFieldConfig {
   key: string;
   label: string;
@@ -298,6 +314,7 @@ export interface Settings {
   productCategories: ProductCategory[];
   clientGroups: ClientGroup[];
   smtp: SmtpConfig;
+  emailTemplates: EmailTemplates;
   documentFields: DocumentFieldsSettings;
   expenseCategories: ExpenseCategoryConfig[];
 }

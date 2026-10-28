@@ -106,6 +106,8 @@ export default function ReportsPage() {
     setActivePreset(preset.label);
   };
 
+  const dateRangeError = range.from && range.to && range.from > range.to;
+
   const onManualDateChange = (field: 'from' | 'to', value: string) => {
     setRange((prev) => ({ ...prev, [field]: value }));
     setActivePreset('');
@@ -368,9 +370,18 @@ export default function ReportsPage() {
               </Field>
             </div>
           </div>
+          {dateRangeError && (
+            <p className="-mt-1 px-3 pb-3 text-xs text-amber-600 dark:text-amber-400">La date « du » est postérieure à la date « au ». La période sélectionnée est invalide.</p>
+          )}
         </Card>
 
-        {isLoading ? (
+        {dateRangeError ? (
+          <Card className="p-10 text-center">
+            <AlertCircle className="mx-auto h-8 w-8 text-amber-500" />
+            <p className="mt-3 text-sm font-medium text-gray-700 dark:text-gray-300">Période invalide</p>
+            <p className="mt-1 text-sm text-gray-500">La date « du » est postérieure à la date « au ». Corrigez les dates pour afficher le rapport.</p>
+          </Card>
+        ) : isLoading ? (
           <div className="space-y-5">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -512,7 +523,7 @@ function KpiCard({ label, value, trend, accent, subtitle }: {
         <p className="label-quiet">{label}</p>
         {trend !== undefined && <TrendBadge value={trend} />}
       </div>
-      <p className={cn('num mt-2 text-[26px] font-semibold leading-none', toneClass[accent])}>{value}</p>
+      <p className={cn('num-amount mt-2 text-[26px] font-semibold leading-none', toneClass[accent])}>{value}</p>
       {subtitle && <p className="mt-2 text-xs text-gray-500">{subtitle}</p>}
     </div>
   );
@@ -530,7 +541,7 @@ function MiniKpi({ label, value, trend, invertTrend }: {
     <div className="flex items-center justify-between gap-2 px-5 py-3.5">
       <div className="min-w-0">
         <p className="label-quiet">{label}</p>
-        <p className="num mt-0.5 text-sm font-semibold text-gray-900 dark:text-gray-100">{value}</p>
+        <p className="num-amount mt-0.5 text-sm font-semibold text-gray-900 dark:text-gray-100">{value}</p>
       </div>
       {trend !== undefined && <TrendBadge value={trend} invert={invertTrend} />}
     </div>
@@ -702,7 +713,7 @@ function SummaryRow({
       <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
       <p
         className={cn(
-          'mt-1 text-lg font-bold',
+          'num-amount mt-1 text-lg font-bold',
           highlight === 'positive' && 'text-emerald-600 dark:text-emerald-400',
           highlight === 'negative' && 'text-red-600 dark:text-red-400',
           !highlight && 'text-gray-900 dark:text-gray-100',
@@ -749,7 +760,7 @@ function SalesTab({
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {invoiceStatusLabels[status as keyof typeof invoiceStatusLabels] ?? status}
             </p>
-            <p className="mt-1.5 text-lg font-bold text-gray-900 dark:text-gray-100">
+            <p className="num-amount mt-1.5 text-lg font-bold text-gray-900 dark:text-gray-100">
               {formatCurrency(data.total, currency)}
             </p>
             <p className="mt-0.5 text-xs text-gray-400">{data.count} facture{data.count > 1 ? 's' : ''}</p>
@@ -790,9 +801,9 @@ function SalesTab({
                     <p className="text-xs text-gray-400">{formatDate(inv.date)} · {invoiceStatusLabels[inv.status as keyof typeof invoiceStatusLabels] ?? inv.status}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(total, currency)}</p>
+                    <p className="num-amount text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(total, currency)}</p>
                     {remaining > 0 && (
-                      <p className="text-xs text-amber-600 dark:text-amber-400">Reste {formatCurrency(remaining, currency)}</p>
+                      <p className="num-amount text-xs text-amber-600 dark:text-amber-400">Reste {formatCurrency(remaining, currency)}</p>
                     )}
                   </div>
                 </div>
@@ -839,7 +850,7 @@ function ClientsTab({
                       </span>
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{client?.name ?? '—'}</span>
                     </div>
-                    <span className="text-base font-bold text-gray-900 dark:text-gray-100">{formatCurrency(billed, currency)}</span>
+                    <span className="num-amount text-base font-bold text-gray-900 dark:text-gray-100">{formatCurrency(billed, currency)}</span>
                   </div>
                   <div className="mt-2 flex items-center gap-3 pl-9">
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
@@ -879,7 +890,7 @@ function ClientsTab({
                   </span>
                   <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{client?.name ?? '—'}</span>
                 </div>
-                <span className="text-base font-bold text-amber-600 dark:text-amber-400">{formatCurrency(total, currency)}</span>
+                <span className="num-amount text-base font-bold text-amber-600 dark:text-amber-400">{formatCurrency(total, currency)}</span>
               </div>
             ))
           )}
@@ -925,7 +936,7 @@ function ProductsTab({
                   <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{p.name}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-base font-bold text-gray-900 dark:text-gray-100">{formatCurrency(p.total, currency)}</span>
+                  <span className="num-amount text-base font-bold text-gray-900 dark:text-gray-100">{formatCurrency(p.total, currency)}</span>
                 </div>
               </div>
               <div className="mt-2 flex items-center gap-3 pl-9">
@@ -992,7 +1003,7 @@ function ExpensesTab({
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-400">{pct.toFixed(0)}%</span>
-                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(amount, currency)}</span>
+                      <span className="num-amount text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(amount, currency)}</span>
                     </div>
                   </div>
                   <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">

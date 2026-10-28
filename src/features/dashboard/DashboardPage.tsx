@@ -158,7 +158,7 @@ export default function DashboardPage() {
             data.lateCount > 0 ? 'border-amber-200 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10' : 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10')}>
             <p className="flex items-center gap-2.5 text-sm font-medium text-gray-800 dark:text-gray-100">
               {data.lateCount > 0
-                ? <><AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" /><span><span className="num">{money(data.lateTotal)}</span> en retard sur {data.lateCount} facture{data.lateCount > 1 ? 's' : ''}. Relancez-les en premier.</span></>
+                ? <><AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" /><span><span className="num-amount">{money(data.lateTotal)}</span> en retard sur {data.lateCount} facture{data.lateCount > 1 ? 's' : ''}. Relancez-les en premier.</span></>
                 : <><CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />Aucun retard de paiement. {data.pendingQuotes > 0 ? `${data.pendingQuotes} devis attend${data.pendingQuotes > 1 ? 'ent' : ''} une réponse.` : 'Tout est à jour.'}</>}
             </p>
             {data.lateCount > 0 && <Button size="sm" variant="outline" onClick={() => navigate('/unpaid')}>Voir les impayés</Button>}
@@ -199,7 +199,7 @@ export default function DashboardPage() {
                       <span className={cn('hidden text-xs font-medium sm:block', days < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500')}>
                         {days < 0 ? `${-days} j de retard` : days === 0 ? "Aujourd'hui" : `dans ${days} j`}
                       </span>
-                      <span className="num w-28 text-right text-sm font-semibold">{money(left)}</span>
+                      <span className="num-amount w-28 text-right text-sm font-semibold">{money(left)}</span>
                       <Button size="sm" variant="secondary" className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100" onClick={() => navigate(`/payments/new/${inv.id}`)}>Encaisser</Button>
                       <ChevronRight className="hidden h-4 w-4 text-gray-300 sm:block" />
                     </li>
@@ -225,12 +225,12 @@ export default function DashboardPage() {
                   ].map(([l, v, c]) => (
                     <div key={l as string} className="flex items-center justify-between gap-3">
                       <dt className="flex items-center gap-2 text-gray-600 dark:text-gray-300"><span className={cn('h-2 w-2 rounded-full', c as string)} />{l}</dt>
-                      <dd className="num font-medium">{money(v as number)}</dd>
+                      <dd className="num-amount font-medium">{money(v as number)}</dd>
                     </div>
                   ))}
                 </dl>
                 <button onClick={() => navigate('/quotes')} className="mt-5 flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2.5 text-left text-sm hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/40">
-                  <span><span className="num font-semibold">{data.pendingQuotes}</span> devis en attente de réponse</span>
+                  <span><span className="num-amount font-semibold">{data.pendingQuotes}</span> devis en attente de réponse</span>
                   <ChevronRight className="h-4 w-4 text-gray-400" />
                 </button>
               </div>
@@ -251,7 +251,7 @@ export default function DashboardPage() {
                     <div className="relative flex flex-1 items-end justify-center gap-1">
                       <div className="w-full max-w-[18px] rounded-t bg-accent-500 transition-opacity group-hover:opacity-80" style={{ height: `${Math.max((m.billed / maxBar) * 100, m.billed ? 2 : 0)}%` }} />
                       <div className="w-full max-w-[18px] rounded-t bg-emerald-500 transition-opacity group-hover:opacity-80" style={{ height: `${Math.max((m.collected / maxBar) * 100, m.collected ? 2 : 0)}%` }} />
-                      <div className="num pointer-events-none absolute -top-1 left-1/2 z-10 hidden -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs text-white shadow-pop group-hover:block dark:bg-gray-100 dark:text-gray-900">
+                      <div className="num-amount pointer-events-none absolute -top-1 left-1/2 z-10 hidden -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs text-white shadow-pop group-hover:block dark:bg-gray-100 dark:text-gray-900">
                         {money(m.billed)} · {money(m.collected)}
                       </div>
                     </div>

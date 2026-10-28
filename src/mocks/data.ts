@@ -489,4 +489,36 @@ export const defaultSettings: Settings = {
     encryption: 'tls',
     enabled: false,
   },
+  emailTemplates: {
+    invoiceSent: {
+      subject: 'Facture {{number}} de {{companyName}}',
+      body: 'Bonjour {{clientName}},\n\nVeuillez trouver ci-joint la facture {{number}} d\'un montant de {{amount}}.\nDate d\'échéance : {{dueDate}}.\n\nMerci de votre confiance.\n{{companyName}}',
+      enabled: true,
+    },
+    invoiceReminder: {
+      subject: 'Rappel : Facture {{number}} en attente de paiement',
+      body: 'Bonjour {{clientName}},\n\nNous vous rappelons que la facture {{number}} d\'un montant de {{amount}} arrive à échéance le {{dueDate}}.\n\nMerci de procéder au règlement dans les meilleurs délais.\n{{companyName}}',
+      enabled: true,
+    },
+    quoteSent: {
+      subject: 'Devis {{number}} de {{companyName}}',
+      body: 'Bonjour {{clientName}},\n\nVeuillez trouver ci-joint notre devis {{number}} d\'un montant de {{amount}}.\nCe devis est valable jusqu\'au {{expiryDate}}.\n\nNous restons à votre disposition pour toute question.\n{{companyName}}',
+      enabled: true,
+    },
+    paymentReceived: {
+      subject: 'Confirmation de paiement - {{number}}',
+      body: 'Bonjour {{clientName}},\n\nNous accusons réception de votre paiement de {{amount}} concernant la facture {{number}}.\n\nMerci pour votre confiance.\n{{companyName}}',
+      enabled: true,
+    },
+    creditNoteIssued: {
+      subject: 'Avoir {{number}} de {{companyName}}',
+      body: 'Bonjour {{clientName}},\n\nNous vous informons qu\'un avoir {{number}} d\'un montant de {{amount}} a été émis suite à : {{reason}}.\n\nCet avoir est rattaché à la facture {{invoiceNumber}}.\n{{companyName}}',
+      enabled: true,
+    },
+    paymentOverdue: {
+      subject: 'URGENT : Facture {{number}} en retard de paiement',
+      body: 'Bonjour {{clientName}},\n\nMalgré nos précédents rappels, la facture {{number}} d\'un montant de {{amount}} reste impayée. Elle était due le {{dueDate}}.\n\nNous vous prions de bien vouloir régulariser cette situation dans les plus brefs délais.\n\nCordialement,\n{{companyName}}',
+      enabled: true,
+    },
+  },
 };

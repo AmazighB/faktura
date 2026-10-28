@@ -38,7 +38,10 @@ export default function QuotesListPage() {
 
   const clientName = (id: string) => (clients ?? []).find((c) => c.id === id)?.name ?? '—';
 
+  const dateRangeError = dateFrom && dateTo && dateFrom > dateTo;
+
   const filtered = useMemo(() => {
+    if (dateRangeError) return [];
     return (quotes ?? []).filter((q) => {
       if (statusFilter !== 'all' && q.status !== statusFilter) return false;
       if (clientFilter !== 'all' && q.clientId !== clientFilter) return false;
@@ -49,7 +52,7 @@ export default function QuotesListPage() {
       if (maxAmount && total > Number(maxAmount)) return false;
       return true;
     });
-  }, [quotes, statusFilter, clientFilter, dateFrom, dateTo, minAmount, maxAmount]);
+  }, [quotes, statusFilter, clientFilter, dateFrom, dateTo, minAmount, maxAmount, dateRangeError]);
 
   const hasActiveFilters = clientFilter !== 'all' || dateFrom || dateTo || minAmount || maxAmount;
   const clearFilters = () => { setClientFilter('all'); setDateFrom(''); setDateTo(''); setMinAmount(''); setMaxAmount(''); };
@@ -137,7 +140,8 @@ export default function QuotesListPage() {
             <Tabs active={statusFilter} onChange={setStatusFilter} tabs={['all', 'brouillon', 'envoye', 'attente', 'accepte', 'refuse', 'expire'].map((s) => ({ key: s, label: s === 'all' ? 'Tous' : quoteStatusLabels[s as QuoteStatus], count: s === 'all' ? undefined : (statusCounts[s] ?? 0) }))} />
           </div>
           {showFilters && (
-            <div className="grid grid-cols-1 gap-3 border-b border-gray-200 p-3 dark:border-gray-800 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="space-y-3 border-b border-gray-200 p-3 dark:border-gray-800">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               <Field label="Client">
                 <Select value={clientFilter} onChange={(e) => setClientFilter(e.target.value)}>
                   <option value="all">Tous les clients</option>
@@ -149,11 +153,21 @@ export default function QuotesListPage() {
               <Field label="Montant min"><Input type="number" value={minAmount} onChange={(e) => setMinAmount(e.target.value)} placeholder="0" /></Field>
               <Field label="Montant max"><Input type="number" value={maxAmount} onChange={(e) => setMaxAmount(e.target.value)} placeholder="∞" /></Field>
             </div>
+            {dateRangeError && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">La date « du » est postérieure à la date « au ». Aucun devis ne correspond à cette période.</p>
+            )}
+            </div>
           )}
           {loading ? (
             <SkeletonRows />
           ) : error ? (
             <ErrorState message={error} onRetry={reload} />
+          ) : dateRangeError ? (
+            <EmptyState
+              icon={FileText}
+              title="Période invalide"
+              description="La date « du » est postérieure à la date « au ». Corrigez les dates pour afficher vos devis."
+            />
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={FileText}

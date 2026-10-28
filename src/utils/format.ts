@@ -3,11 +3,11 @@ export function formatCurrency(amount: number, currency = 'DA'): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(amount);
-  return `${formatted} ${currency}`;
+  return `${formatted.replace(/\u202F|\u00A0/g, '\u2009')} ${currency}`;
 }
 
 export function formatNumber(value: number): string {
-  return new Intl.NumberFormat('fr-DZ').format(value);
+  return new Intl.NumberFormat('fr-DZ').format(value).replace(/\u202F|\u00A0/g, '\u2009');
 }
 
 export function formatDate(date: string | Date, opts?: Intl.DateTimeFormatOptions): string {
