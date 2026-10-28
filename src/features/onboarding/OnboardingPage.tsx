@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Receipt, Check, ArrowRight, ArrowLeft, Building2, Package, Users, BarChart3, Sparkles } from 'lucide-react';
+import { Receipt, Check, ArrowRight, ArrowLeft, Building2, Package, BarChart3, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Field, Input, Textarea } from '@/components/ui/Input';
 import { Switch } from '@/components/ui/Switch';
-import { useToast } from '@/app/providers/ToastProvider';
-import { useApp } from '@/app/providers/AppProvider';
+import { useToast } from '@/app/providers/ToastContext';
+import { useApp } from '@/app/providers/AppContext';
 import { ALL_MODULES, getDefaultModules, saveModuleConfig, setOnboardingComplete, type ModuleConfig } from '@/utils/modules';
 import { services } from '@/services';
 import { cn } from '@/utils/cn';
@@ -17,8 +17,6 @@ const steps = [
   { key: 'modules', label: 'Modules' },
   { key: 'finish', label: 'Terminé' },
 ];
-
-const colorOptions = ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'];
 
 export default function OnboardingPage() {
   const navigate = useNavigate();

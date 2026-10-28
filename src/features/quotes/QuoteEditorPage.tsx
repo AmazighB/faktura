@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { DocumentEditor } from '@/components/ui/DocumentEditor';
 import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
-import { useToast } from '@/app/providers/ToastProvider';
+import { useToast } from '@/app/providers/ToastContext';
 import type { QuoteStatus, DocumentItem } from '@/types';
 
 export default function QuoteEditorPage() {

@@ -9,8 +9,8 @@ import { LoadingOverlay } from '@/components/feedback/Loading';
 import { ErrorState } from '@/components/feedback/EmptyState';
 import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
-import { useToast } from '@/app/providers/ToastProvider';
-import { useConfirm } from '@/app/providers/ConfirmProvider';
+import { useToast } from '@/app/providers/ToastContext';
+import { useConfirm } from '@/app/providers/ConfirmContext';
 import { computeTotals } from '@/utils/calc';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { quoteStatusLabels } from '@/utils/labels';
@@ -129,6 +129,7 @@ export default function QuoteDetailPage() {
             conditions={quote.conditions}
             company={settings?.company ?? ({} as never)}
             currency={settings?.currency ?? 'DA'}
+            template={settings?.quoteTemplate}
           />
         </div>
       </div>

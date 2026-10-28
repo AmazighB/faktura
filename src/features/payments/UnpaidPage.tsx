@@ -11,7 +11,7 @@ import { SkeletonRows } from '@/components/feedback/Loading';
 import { InvoiceStatusBadge } from '@/components/ui/StatusBadge';
 import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
-import { useToast } from '@/app/providers/ToastProvider';
+import { useToast } from '@/app/providers/ToastContext';
 import { formatCurrency, formatDate, daysUntil } from '@/utils/format';
 import { computeTotals } from '@/utils/calc';
 import type { Invoice } from '@/types';

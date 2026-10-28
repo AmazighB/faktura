@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Receipt, Eye, EyeOff, Mail, Lock, ArrowRight, Shield, Zap, TrendingUp } from 'lucide-react';
-import { useAuth } from '@/app/providers/AuthProvider';
-import { useApp } from '@/app/providers/AppProvider';
+import { useAuth } from '@/app/providers/AuthContext';
+import { useApp } from '@/app/providers/AppContext';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/utils/cn';
 

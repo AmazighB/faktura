@@ -4,8 +4,8 @@ import {
   LayoutDashboard, Users, Package, FileText, Receipt, CreditCard, Wallet, Truck, BarChart3,
   Settings, Shield, PanelLeftClose, PanelLeft, X, FileMinus, HandCoins, Lock, Unlock,
 } from 'lucide-react';
-import { useApp } from '@/app/providers/AppProvider';
-import { useAuth } from '@/app/providers/AuthProvider';
+import { useApp } from '@/app/providers/AppContext';
+import { useAuth } from '@/app/providers/AuthContext';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { cn } from '@/utils/cn';
 

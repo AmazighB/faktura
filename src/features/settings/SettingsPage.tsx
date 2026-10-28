@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Save, Building2, FileText, CreditCard, Globe, Package, RefreshCw, CheckCircle2, AlertCircle, Mail, Server, Hash, Percent, LayoutGrid, ListChecks, Tag, Plus, Trash2, X, ChevronDown, RotateCcw, Upload, ImageIcon } from 'lucide-react';
+import { Save, Building2, FileText, CreditCard, Globe, RefreshCw, CheckCircle2, AlertCircle, Mail, Server, Hash, Percent, LayoutGrid, ListChecks, Tag, Plus, Trash2, X, ChevronDown, RotateCcw, Upload, ImageIcon } from 'lucide-react';
 import { PageHeader, PageContent } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -7,8 +7,8 @@ import { Field, Input, Select, Textarea } from '@/components/ui/Input';
 import { Switch } from '@/components/ui/Switch';
 import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
-import { useToast } from '@/app/providers/ToastProvider';
-import { useApp } from '@/app/providers/AppProvider';
+import { useToast } from '@/app/providers/ToastContext';
+import { useApp } from '@/app/providers/AppContext';
 import { cn } from '@/utils/cn';
 import { ALL_MODULES, loadModuleConfig, saveModuleConfig, type ModuleConfig } from '@/utils/modules';
 import type { Settings, PaymentMethod, SmtpConfig, ExpenseCategoryConfig, EmailTemplateKey, EmailTemplate } from '@/types';

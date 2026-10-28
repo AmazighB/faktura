@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Tabs } from '@/components/ui/Tabs';
 import { Skeleton } from '@/components/feedback/Loading';
 import { useAsync } from '@/hooks/useAsync';
-import { useAuth } from '@/app/providers/AuthProvider';
+import { useAuth } from '@/app/providers/AuthContext';
 import { services } from '@/services';
 import { computeTotals } from '@/utils/calc';
 import { formatCurrency, formatDate, formatRelative, daysUntil } from '@/utils/format';

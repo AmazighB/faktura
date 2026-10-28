@@ -3,7 +3,6 @@ import { CheckCircle2, AlertCircle, Info, XCircle, X } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { ToastContext, type Toast, type ToastType } from './ToastContext';
 
-export { useToast } from './ToastContext';
 export type { Toast, ToastType } from './ToastContext';
 
 const icons = {

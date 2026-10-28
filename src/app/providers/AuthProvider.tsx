@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { AuthContext, type AuthUser } from './AuthContext';
 
-export { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'factura.auth';
 

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, Sun, Moon, Monitor, Plus, FileText, Receipt, UserPlus, CreditCard, Menu, User, LogOut, ChevronDown, Zap, Package, Wallet, FileMinus, PlusIcon, Maximize2, Minimize2 } from 'lucide-react';
+import { Search, Bell, Sun, Moon, Monitor, Plus, FileText, Receipt, UserPlus, CreditCard, Menu, User, LogOut, ChevronDown, Zap, Package, Wallet, FileMinus, Maximize2, Minimize2 } from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
-import { useApp } from '@/app/providers/AppProvider';
-import { useAuth } from '@/app/providers/AuthProvider';
+import { useApp } from '@/app/providers/AppContext';
+import { useAuth } from '@/app/providers/AuthContext';
 import { services } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { CommandPalette } from '@/components/ui/CommandPalette';
@@ -30,7 +30,7 @@ const quickActions: QuickAction[] = [
 ];
 
 export function Header() {
-  const { theme, setTheme, toggleSidebar, toggleMobileSidebar, moduleConfig } = useApp();
+  const { theme, setTheme, toggleMobileSidebar, moduleConfig } = useApp();
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [paletteOpen, setPaletteOpen] = useState(false);

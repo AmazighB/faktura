@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, Copy, Trash2, FileCheck2, Eye, MoreVertical, Filter, X } from 'lucide-react';
+import { Plus, FileText, Trash2, FileCheck2, Eye, Filter, X } from 'lucide-react';
 import { PageHeader, PageContent } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Tabs } from '@/components/ui/Tabs';
@@ -12,8 +12,8 @@ import { SkeletonRows } from '@/components/feedback/Loading';
 import { QuoteStatusBadge } from '@/components/ui/StatusBadge';
 import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
-import { useToast } from '@/app/providers/ToastProvider';
-import { useConfirm } from '@/app/providers/ConfirmProvider';
+import { useToast } from '@/app/providers/ToastContext';
+import { useConfirm } from '@/app/providers/ConfirmContext';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { computeTotals } from '@/utils/calc';
 import { quoteStatusLabels } from '@/utils/labels';

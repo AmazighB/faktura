@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, FileText, Receipt, Users, Package, CreditCard, Plus, ArrowRight } from 'lucide-react';
+import { Search, Plus, ArrowRight } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
 interface SearchResult {
@@ -48,10 +48,10 @@ export function CommandPalette({
     ? allItems.filter((i) => i.label.toLowerCase().includes(query.toLowerCase()))
     : allItems;
 
-  const handleSelect = (item: { route: string }) => {
+  const handleSelect = useCallback((item: { route: string }) => {
     navigate(item.route);
     onClose();
-  };
+  }, [navigate, onClose]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -69,7 +69,7 @@ export function CommandPalette({
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, filtered, selectedIdx]);
+  }, [open, filtered, selectedIdx, handleSelect]);
 
   if (!open) return null;
 

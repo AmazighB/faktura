@@ -14,12 +14,12 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { Field, Input, Select, Textarea } from '@/components/ui/Input';
 import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
-import { useToast } from '@/app/providers/ToastProvider';
-import { useConfirm } from '@/app/providers/ConfirmProvider';
+import { useToast } from '@/app/providers/ToastContext';
+import { useConfirm } from '@/app/providers/ConfirmContext';
 import { computeTotals } from '@/utils/calc';
 import { formatCurrency, formatDate, toISODate } from '@/utils/format';
-import { invoiceStatusLabels, paymentMethodLabels } from '@/utils/labels';
-import type { InvoiceStatus, PaymentMethod } from '@/types';
+import { paymentMethodLabels } from '@/utils/labels';
+import type { PaymentMethod } from '@/types';
 
 import { printElement } from '@/utils/print';
 
@@ -208,6 +208,7 @@ export default function InvoiceDetailPage() {
             conditions={invoice.conditions}
             company={settings?.company ?? ({} as never)}
             currency={settings?.currency ?? 'DA'}
+            template={settings?.invoiceTemplate}
             paidAmount={invoice.paidAmount}
           />
 

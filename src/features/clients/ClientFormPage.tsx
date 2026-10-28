@@ -8,7 +8,7 @@ import { Field, Input, Select, Textarea } from '@/components/ui/Input';
 import { cn } from '@/utils/cn';
 import { services } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
-import { useToast } from '@/app/providers/ToastProvider';
+import { useToast } from '@/app/providers/ToastContext';
 import type { Client, ClientType } from '@/types';
 
 const empty: Omit<Client, 'id' | 'createdAt' | 'updatedAt' | 'lastActivityAt'> = {

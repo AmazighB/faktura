@@ -1,8 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Printer, CheckCircle2, FileX, Pencil } from 'lucide-react';
+import { ArrowLeft, Printer, CheckCircle2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { DocumentPreview } from '@/components/ui/DocumentPreview';
 import { CreditNoteStatusBadge } from '@/components/ui/StatusBadge';
 import { LoadingOverlay } from '@/components/feedback/Loading';
@@ -10,8 +9,8 @@ import { ErrorState } from '@/components/feedback/EmptyState';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
-import { useToast } from '@/app/providers/ToastProvider';
-import { useConfirm } from '@/app/providers/ConfirmProvider';
+import { useToast } from '@/app/providers/ToastContext';
+import { useConfirm } from '@/app/providers/ConfirmContext';
 import { computeTotals } from '@/utils/calc';
 import { formatCurrency } from '@/utils/format';
 import type { CompanyInfo } from '@/types';
@@ -108,6 +107,7 @@ export default function CreditNoteDetailPage() {
             conditions={creditNote.reason}
             company={settings?.company ?? ({} as CompanyInfo)}
             currency={settings?.currency ?? 'DA'}
+            template={settings?.invoiceTemplate}
           />
         </div>
       </div>

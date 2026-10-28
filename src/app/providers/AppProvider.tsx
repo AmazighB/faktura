@@ -4,7 +4,6 @@ import { t as translate } from '@/utils/i18n';
 import { loadModuleConfig, type ModuleConfig } from '@/utils/modules';
 import { AppContext, type AppContextValue, type Theme } from './AppContext';
 
-export { useApp } from './AppContext';
 export type { Theme } from './AppContext';
 
 function getSystemDark(): boolean {

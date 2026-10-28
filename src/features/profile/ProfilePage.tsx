@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Mail, Shield, Check, KeyRound, LogOut, Bell, Palette, Globe } from 'lucide-react';
+import { User, Mail, Shield, Check, KeyRound, LogOut, Bell, Palette } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader, PageContent } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -7,10 +7,10 @@ import { Card } from '@/components/ui/Card';
 import { Field, Input, Select } from '@/components/ui/Input';
 import { Switch } from '@/components/ui/Switch';
 import { Badge } from '@/components/ui/Badge';
-import { useToast } from '@/app/providers/ToastProvider';
-import { useAuth } from '@/app/providers/AuthProvider';
-import { useApp } from '@/app/providers/AppProvider';
-import { useConfirm } from '@/app/providers/ConfirmProvider';
+import { useToast } from '@/app/providers/ToastContext';
+import { useAuth } from '@/app/providers/AuthContext';
+import { useApp } from '@/app/providers/AppContext';
+import { useConfirm } from '@/app/providers/ConfirmContext';
 import { userRoleLabels } from '@/utils/labels';
 import { cn } from '@/utils/cn';
 

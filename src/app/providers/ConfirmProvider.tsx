@@ -3,7 +3,6 @@ import type { ConfirmOptions } from '@/components/feedback/ConfirmDialog';
 import { ConfirmDialog } from '@/components/feedback/ConfirmDialog';
 import { ConfirmContext } from './ConfirmContext';
 
-export { useConfirm } from './ConfirmContext';
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [dialog, setDialog] = useState<(ConfirmOptions & { resolve: (v: boolean) => void }) | null>(null);

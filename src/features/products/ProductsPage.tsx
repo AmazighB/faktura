@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Plus, Package, Edit3, Trash2, Search, Archive, Tag, X, Check } from 'lucide-react';
+import { Plus, Package, Edit3, Trash2, Archive, Tag, X, Check } from 'lucide-react';
 import { PageHeader, PageContent } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Tabs } from '@/components/ui/Tabs';
@@ -16,8 +16,8 @@ import { ExportImportButton } from '@/components/ui/ExportImportButton';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
-import { useToast } from '@/app/providers/ToastProvider';
-import { useConfirm } from '@/app/providers/ConfirmProvider';
+import { useToast } from '@/app/providers/ToastContext';
+import { useConfirm } from '@/app/providers/ConfirmContext';
 import { formatCurrency } from '@/utils/format';
 import { productTypeLabels } from '@/utils/labels';
 import { productTypeDot } from '@/utils/styles';

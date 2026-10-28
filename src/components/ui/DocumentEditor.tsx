@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, Plus, X, Trash2, UserPlus, ChevronDown } from 'lucide-react';
+import { Search, Plus, X, Trash2, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Input, Select, Field, Textarea } from '@/components/ui/Input';
+import { Input, Field, Textarea } from '@/components/ui/Input';
 import { DocumentPreview } from '@/components/ui/DocumentPreview';
 import { Dialog } from '@/components/ui/Dialog';
 import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
-import { useToast } from '@/app/providers/ToastProvider';
+import { useToast } from '@/app/providers/ToastContext';
 import { computeTotals, lineHT } from '@/utils/calc';
-import { formatCurrency, formatDate, toISODate, addDays } from '@/utils/format';
+import { formatCurrency, toISODate, addDays } from '@/utils/format';
 import { cn } from '@/utils/cn';
-import type { Client, DocumentItem, Product, CompanyInfo } from '@/types';
+import type { DocumentItem, Product, CompanyInfo } from '@/types';
 
 interface DocumentEditorProps {
   type: 'facture' | 'devis';
@@ -418,6 +418,7 @@ export function DocumentEditor({ type, documentId, onSave, initialNumber, initia
           conditions={conditions}
           company={company}
           currency={currency}
+          template={type === 'devis' ? settings?.quoteTemplate : settings?.invoiceTemplate}
         />
       </div>
 

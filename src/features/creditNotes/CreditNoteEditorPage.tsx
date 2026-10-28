@@ -7,7 +7,7 @@ import { DocumentPreview } from '@/components/ui/DocumentPreview';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
-import { useToast } from '@/app/providers/ToastProvider';
+import { useToast } from '@/app/providers/ToastContext';
 import { computeTotals, lineHT } from '@/utils/calc';
 import { cn } from '@/utils/cn';
 import { formatCurrency, toISODate } from '@/utils/format';
@@ -293,6 +293,7 @@ export default function CreditNoteEditorPage() {
           conditions={reason}
           company={company}
           currency={currency}
+          template={settings?.invoiceTemplate}
         />
       </div>
     </div>

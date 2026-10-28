@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/app/providers/AuthProvider';
+import { useAuth } from '@/app/providers/AuthContext';
 import { AppLayout } from '@/app/layouts/AppLayout';
 import { isOnboardingComplete } from '@/utils/modules';
 

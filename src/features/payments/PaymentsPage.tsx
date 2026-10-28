@@ -10,13 +10,13 @@ import { EmptyState, ErrorState } from '@/components/feedback/EmptyState';
 import { SkeletonRows } from '@/components/feedback/Loading';
 import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
-import { useToast } from '@/app/providers/ToastProvider';
-import { useConfirm } from '@/app/providers/ConfirmProvider';
+import { useToast } from '@/app/providers/ToastContext';
+import { useConfirm } from '@/app/providers/ConfirmContext';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { paymentMethodLabels } from '@/utils/labels';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Field, Input, Select } from '@/components/ui/Input';
-import type { Payment, PaymentMethod } from '@/types';
+import type { Payment } from '@/types';
 
 export default function PaymentsPage() {
   const navigate = useNavigate();

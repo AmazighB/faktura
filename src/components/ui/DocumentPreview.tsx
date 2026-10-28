@@ -19,6 +19,31 @@ interface DocumentPreviewProps {
   children?: ReactNode;
 }
 
+/** Modèles de document (Paramètres > Modèle facture / devis). Seules des classes gérées par utils/print.ts sont utilisées. */
+const templateStyles = {
+  moderne: {
+    root: '',
+    header: 'border-b border-gray-200',
+    title: 'text-2xl font-bold tracking-wide text-gray-900',
+    thead: 'border-b-2 border-gray-200 text-gray-400',
+    total: 'border-t border-gray-300',
+  },
+  classique: {
+    root: 'font-serif',
+    header: 'border-b-2 border-gray-900',
+    title: 'text-2xl font-bold tracking-wide text-gray-900',
+    thead: 'border-b-2 border-gray-900 text-gray-900',
+    total: 'border-t-2 border-gray-900',
+  },
+  minimal: {
+    root: '',
+    header: 'border-b border-gray-100',
+    title: 'text-lg font-medium tracking-wide text-gray-500',
+    thead: 'border-b border-gray-200 text-gray-400',
+    total: 'border-t border-gray-200',
+  },
+} as const;
+
 const typeLabels = {
   facture: 'FACTURE',
   devis: 'DEVIS',
@@ -42,11 +67,12 @@ export function DocumentPreview({
 }: DocumentPreviewProps) {
   const totals = computeTotals(items);
   const remaining = totals.totalTTC - paidAmount;
+  const tpl = templateStyles[template] ?? templateStyles.moderne;
 
   return (
-    <div className="mx-auto max-w-[800px] bg-white p-8 text-black shadow-sm" id="document-preview">
+    <div className={`mx-auto max-w-[800px] bg-white p-8 text-black shadow-sm ${tpl.root}`} id="document-preview" data-template={template}>
       {/* Header */}
-      <div className="flex items-start justify-between border-b border-gray-200 pb-6">
+      <div className={`flex items-start justify-between ${tpl.header} pb-6`}>
         <div>
           <div className="flex items-center gap-2">
             {company.logo ? (
@@ -69,7 +95,7 @@ export function DocumentPreview({
           </div>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-bold tracking-wide text-gray-900">{typeLabels[type]}</p>
+          <p className={tpl.title}>{typeLabels[type]}</p>
           <p className="mt-1 text-sm font-medium text-gray-700">{number}</p>
           <div className="mt-3 text-xs text-gray-500">
             <p>Date: {formatDate(date)}</p>
@@ -96,7 +122,7 @@ export function DocumentPreview({
       {/* Items */}
       <table className="mt-6 w-full text-sm">
         <thead>
-          <tr className="border-b-2 border-gray-200 text-left text-xs uppercase tracking-wide text-gray-400">
+          <tr className={`${tpl.thead} text-left text-xs uppercase tracking-wide`}>
             <th className="pb-2 pr-3">Désignation</th>
             <th className="w-16 pb-2 pr-3 text-right">Qté</th>
             <th className="w-28 pb-2 pr-3 text-right">P.U. HT</th>
@@ -141,7 +167,7 @@ export function DocumentPreview({
             <span>TVA</span>
             <span className="num-amount">{formatCurrency(totals.vatAmount, currency)}</span>
           </div>
-          <div className="flex justify-between border-t border-gray-300 pt-2 text-base font-bold text-gray-900">
+          <div className={`flex justify-between ${tpl.total} pt-2 text-base font-bold text-gray-900`}>
             <span>Total TTC</span>
             <span className="num-amount">{formatCurrency(totals.totalTTC, currency)}</span>
           </div>
