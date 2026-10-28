@@ -5,6 +5,8 @@ import type {
   ClientGroup,
   CreditNote,
   Expense,
+  ExpenseCategoryConfig,
+  DocumentFieldsSettings,
   Invoice,
   Notification,
   Payment,
@@ -394,6 +396,56 @@ export const mockNotifications: Notification[] = [
   },
 ];
 
+export const defaultDocumentFields: DocumentFieldsSettings = {
+  invoice: {
+    fields: [
+      { key: 'client', label: 'Client', enabled: true, required: true },
+      { key: 'date', label: 'Date', enabled: true, required: true },
+      { key: 'dueDate', label: 'Échéance', enabled: true, required: true },
+      { key: 'items', label: 'Lignes', enabled: true, required: true },
+      { key: 'notes', label: 'Notes', enabled: true, required: false },
+      { key: 'conditions', label: 'Conditions', enabled: true, required: false },
+      { key: 'discount', label: 'Remise', enabled: false, required: false },
+      { key: 'paymentRef', label: 'Référence paiement', enabled: false, required: false },
+    ],
+    units: ['unité', 'heure', 'jour', 'mois', 'mètre', 'forfait', 'kg', 'litre', 'lot'],
+  },
+  quote: {
+    fields: [
+      { key: 'client', label: 'Client', enabled: true, required: true },
+      { key: 'date', label: 'Date', enabled: true, required: true },
+      { key: 'expiryDate', label: 'Validité', enabled: true, required: true },
+      { key: 'items', label: 'Lignes', enabled: true, required: true },
+      { key: 'notes', label: 'Notes', enabled: true, required: false },
+      { key: 'conditions', label: 'Conditions', enabled: true, required: false },
+      { key: 'discount', label: 'Remise', enabled: false, required: false },
+    ],
+    units: ['unité', 'heure', 'jour', 'mois', 'mètre', 'forfait', 'kg', 'litre', 'lot'],
+  },
+  creditNote: {
+    reasons: [
+      'Retour matériel',
+      'Erreur de facturation',
+      'Remise commerciale',
+      'Annulation partielle',
+      'Annulation totale',
+      'Produit défectueux',
+      'Autre',
+    ],
+    units: ['unité', 'heure', 'jour', 'mois', 'mètre', 'forfait', 'kg', 'litre', 'lot'],
+  },
+};
+
+export const defaultExpenseCategories: ExpenseCategoryConfig[] = [
+  { id: 'ec1', name: 'Fournitures', color: '#3b82f6' },
+  { id: 'ec2', name: 'Transport', color: '#10b981' },
+  { id: 'ec3', name: 'Télécommunication', color: '#f59e0b' },
+  { id: 'ec4', name: 'Loyer', color: '#ef4444' },
+  { id: 'ec5', name: 'Équipement', color: '#8b5cf6' },
+  { id: 'ec6', name: 'Logiciels', color: '#06b6d4' },
+  { id: 'ec7', name: 'Autre', color: '#6b7280' },
+];
+
 export const defaultSettings: Settings = {
   company: {
     name: 'SecurPro Solutions',
@@ -425,6 +477,8 @@ export const defaultSettings: Settings = {
   theme: 'system',
   productCategories: mockProductCategories,
   clientGroups: mockClientGroups,
+  documentFields: defaultDocumentFields,
+  expenseCategories: defaultExpenseCategories,
   smtp: {
     host: '',
     port: 587,

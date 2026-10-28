@@ -42,7 +42,7 @@ export default function InvoiceDetailPage() {
   const { data: payments, reload: reloadPayments } = useAsync(() => (id ? services.payments.getByInvoice(id) : Promise.resolve([])), [id]);
 
   const totals = useMemo(() => (invoice ? computeTotals(invoice.items) : null), [invoice]);
-  const remaining = totals ? totals.totalTTC - (invoice?.paidAmount ?? 0) : 0;
+  const remaining = totals ? totals.totalTTC - (invoice?.paidAmount ?? 0) - (invoice?.creditNotesApplied ?? 0) : 0;
 
   if (loading) return <LoadingOverlay message="Chargement de la facture..." />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
@@ -72,9 +72,6 @@ export default function InvoiceDetailPage() {
         reference: paymentRef,
         note: paymentNote,
       });
-      const newPaid = invoice.paidAmount + amount;
-      const newStatus: InvoiceStatus = newPaid >= totals!.totalTTC ? 'payee' : 'partielle';
-      await services.invoices.update(invoice.id, { paidAmount: newPaid, status: newStatus });
       services.activityLogs.log({
         userId: 'u1', userName: 'Administrateur',
         action: 'a enregistré un paiement de', entity: 'Paiement', details: formatCurrency(amount, settings?.currency ?? 'DA'),
@@ -127,7 +124,7 @@ export default function InvoiceDetailPage() {
 
   const money = (v: number) => formatCurrency(v, settings?.currency ?? 'DA');
   const total = totals!.totalTTC;
-  const paidPct = total > 0 ? Math.min((invoice.paidAmount / total) * 100, 100) : 0;
+  const paidPct = total > 0 ? Math.min(((invoice.paidAmount + (invoice.creditNotesApplied ?? 0)) / total) * 100, 100) : 0;
   const isDraft = invoice.status === 'brouillon';
   const canCancel = invoice.status !== 'brouillon' && invoice.status !== 'annulee';
   const openPayment = () => { setPaymentAmount(String(remaining)); setPaymentOpen(true); };
@@ -187,7 +184,7 @@ export default function InvoiceDetailPage() {
           <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
             <div className="flex flex-wrap gap-x-8 gap-y-1">
               <div><p className="label-quiet">Total TTC</p><p className="num text-sm font-semibold">{money(total)}</p></div>
-              <div><p className="label-quiet">Payé</p><p className="num text-sm font-semibold text-emerald-600 dark:text-emerald-400">{money(invoice.paidAmount)}</p></div>
+              <div><p className="label-quiet">Payé</p><p className="num text-sm font-semibold text-emerald-600 dark:text-emerald-400">{money(invoice.paidAmount + (invoice.creditNotesApplied ?? 0))}</p></div>
               <div><p className="label-quiet">Reste à payer</p><p className={'num text-sm font-semibold ' + (remaining > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400')}>{money(remaining)}</p></div>
             </div>
             <p className="num text-xs text-gray-500">{Math.round(paidPct)} % réglé</p>

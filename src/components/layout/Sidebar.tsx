@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Package, FileText, Receipt, CreditCard, Wallet, Truck, BarChart3,
-  Settings, Shield, PanelLeftClose, PanelLeft, X, FileMinus, HandCoins,
+  Settings, Shield, PanelLeftClose, PanelLeft, X, FileMinus, HandCoins, Lock, Unlock,
 } from 'lucide-react';
 import { useApp } from '@/app/providers/AppProvider';
 import { useAuth } from '@/app/providers/AuthProvider';
@@ -13,7 +14,7 @@ interface NavItem {
   label: string;
   icon: typeof LayoutDashboard;
   moduleKey: string;
-  hint?: string; // raccourci "g + lettre"
+  hint?: string;
 }
 
 const mainNav: NavItem[] = [
@@ -80,18 +81,26 @@ function NavSection({ title, items, collapsed, moduleConfig }: { title?: string;
 }
 
 export function Sidebar() {
-  const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, setMobileSidebarOpen, moduleConfig } = useApp();
+  const { sidebarCollapsed, toggleSidebar, sidebarLocked, toggleSidebarLocked, mobileSidebarOpen, setMobileSidebarOpen, moduleConfig } = useApp();
   const { user } = useAuth();
   const name = (user as { name?: string } | null)?.name ?? 'Mon compte';
+  const [hovered, setHovered] = useState(false);
+
+  // On desktop: when collapsed and not locked, hover temporarily expands.
+  // When locked, the sidebar stays expanded regardless of the collapsed toggle.
+  const isExpanded = sidebarLocked ? true : !sidebarCollapsed || hovered;
+  const showCollapsed = !isExpanded;
 
   return (
     <>
       {mobileSidebarOpen && <div className="fixed inset-0 z-40 bg-black/40 animate-fade-in lg:hidden" onClick={() => setMobileSidebarOpen(false)} />}
 
       <aside
+        onMouseEnter={() => { if (sidebarCollapsed && !sidebarLocked) setHovered(true); }}
+        onMouseLeave={() => setHovered(false)}
         className={cn(
           'flex h-full flex-col border-r border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950',
-          sidebarCollapsed ? 'w-[68px]' : 'w-[248px]',
+          isExpanded ? 'w-[248px]' : 'w-[68px]',
           'fixed inset-y-0 left-0 z-50 transition-[transform,width] duration-200 lg:static lg:translate-x-0',
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full',
         )}
@@ -100,30 +109,47 @@ export function Sidebar() {
           <X className="h-4 w-4" />
         </button>
 
-        <div className={cn('flex items-center gap-2.5 px-4 pb-2 pt-5', sidebarCollapsed && 'justify-center px-2')}>
+        <div className={cn('flex items-center gap-2.5 px-4 pb-2 pt-5', showCollapsed && 'justify-center px-2')}>
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-900">
             <Receipt className="h-[18px] w-[18px]" strokeWidth={2} />
           </div>
-          {!sidebarCollapsed && <p className="text-[15px] font-semibold tracking-tight">Factura</p>}
+          {!showCollapsed && <p className="text-[15px] font-semibold tracking-tight">Factura</p>}
         </div>
 
         <nav aria-label="Navigation principale" className="flex-1 overflow-y-auto px-3 pb-3 scrollbar-thin">
-          <NavSection items={mainNav} collapsed={sidebarCollapsed} moduleConfig={moduleConfig} />
-          <NavSection title="Ventes" items={salesNav} collapsed={sidebarCollapsed} moduleConfig={moduleConfig} />
-          <NavSection title="Argent" items={financeNav} collapsed={sidebarCollapsed} moduleConfig={moduleConfig} />
-          <NavSection title="Pilotage" items={systemNav} collapsed={sidebarCollapsed} moduleConfig={moduleConfig} />
+          <NavSection items={mainNav} collapsed={showCollapsed} moduleConfig={moduleConfig} />
+          <NavSection title="Ventes" items={salesNav} collapsed={showCollapsed} moduleConfig={moduleConfig} />
+          <NavSection title="Argent" items={financeNav} collapsed={showCollapsed} moduleConfig={moduleConfig} />
+          <NavSection title="Pilotage" items={systemNav} collapsed={showCollapsed} moduleConfig={moduleConfig} />
         </nav>
 
-        <div className={cn('flex items-center gap-2 border-t border-gray-200 p-3 dark:border-gray-800', sidebarCollapsed && 'flex-col')}>
+        <div className={cn('flex items-center gap-2 border-t border-gray-200 p-3 dark:border-gray-800', showCollapsed && 'flex-col')}>
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-100 text-xs font-semibold text-accent-700 dark:bg-accent-500/20 dark:text-accent-300">
             {name.charAt(0).toUpperCase()}
           </div>
-          {!sidebarCollapsed && <p className="min-w-0 flex-1 truncate text-[13px] font-medium">{name}</p>}
-          <Tooltip label={sidebarCollapsed ? 'Agrandir le menu' : 'Réduire le menu'} side="right">
-            <button onClick={toggleSidebar} aria-label={sidebarCollapsed ? 'Agrandir le menu' : 'Réduire le menu'} className="hidden rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 lg:block">
-              {sidebarCollapsed ? <PanelLeft style={{ width: 18, height: 18 }} /> : <PanelLeftClose style={{ width: 18, height: 18 }} />}
-            </button>
-          </Tooltip>
+          {!showCollapsed && <p className="min-w-0 flex-1 truncate text-[13px] font-medium">{name}</p>}
+          <div className={cn('flex items-center gap-1', showCollapsed && 'flex-col gap-1')}>
+            {/* Lock toggle: only on desktop. Visible when expanded (locked or hovered). */}
+            <Tooltip label={sidebarLocked ? 'Déverrouiller le menu' : 'Verrouiller le menu'} side="right">
+              <button
+                onClick={toggleSidebarLocked}
+                aria-label={sidebarLocked ? 'Déverrouiller le menu' : 'Verrouiller le menu'}
+                className={cn(
+                  'hidden rounded-md p-1.5 transition-colors lg:block',
+                  sidebarLocked
+                    ? 'text-accent-600 hover:bg-accent-50 dark:text-accent-400 dark:hover:bg-accent-900/20'
+                    : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800',
+                )}
+              >
+                {sidebarLocked ? <Lock style={{ width: 16, height: 16 }} /> : <Unlock style={{ width: 16, height: 16 }} />}
+              </button>
+            </Tooltip>
+            <Tooltip label={sidebarCollapsed ? 'Agrandir le menu' : 'Réduire le menu'} side="right">
+              <button onClick={toggleSidebar} aria-label={sidebarCollapsed ? 'Agrandir le menu' : 'Réduire le menu'} className="hidden rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 lg:block">
+                {sidebarCollapsed ? <PanelLeft style={{ width: 18, height: 18 }} /> : <PanelLeftClose style={{ width: 18, height: 18 }} />}
+              </button>
+            </Tooltip>
+          </div>
         </div>
       </aside>
     </>

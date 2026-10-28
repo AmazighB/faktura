@@ -84,7 +84,7 @@ export default function InvoicesListPage() {
       key: 'paid',
       header: 'Payé',
       align: 'right',
-      render: (i) => <span className={i.paidAmount > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}>{formatCurrency(i.paidAmount)}</span>,
+      render: (i) => <span className={(i.paidAmount + (i.creditNotesApplied ?? 0)) > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}>{formatCurrency(i.paidAmount + (i.creditNotesApplied ?? 0))}</span>,
     },
     { key: 'status', header: 'Statut', render: (i) => <InvoiceStatusBadge status={i.status} /> },
     {

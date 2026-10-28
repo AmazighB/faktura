@@ -390,7 +390,13 @@ export default function ProductsPage() {
                 </Tooltip>
               </div>
             </Field>
-            <Field label="Unité"><Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></Field>
+            <Field label="Unité">
+              <Select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
+                {(settings?.documentFields.invoice.units ?? ['unité', 'heure', 'jour', 'mois', 'mètre', 'forfait']).map((u) => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </Select>
+            </Field>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <Field label="Prix HT"><Input type="number" value={form.priceHT} onChange={(e) => setForm({ ...form, priceHT: Number(e.target.value) })} /></Field>

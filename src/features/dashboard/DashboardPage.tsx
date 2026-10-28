@@ -70,7 +70,7 @@ export default function DashboardPage() {
   const data = useMemo(() => {
     const inv = invoices ?? [];
     const real = inv.filter((i) => i.status !== 'brouillon' && i.status !== 'annulee');
-    const remaining = (i: (typeof inv)[number]) => Math.max(computeTotals(i.items).totalTTC - i.paidAmount, 0);
+    const remaining = (i: (typeof inv)[number]) => Math.max(computeTotals(i.items).totalTTC - i.paidAmount - (i.creditNotesApplied ?? 0), 0);
     const isLate = (i: (typeof inv)[number]) => i.status === 'retard' || (i.status !== 'payee' && daysUntil(i.dueDate) < 0);
 
     const { start, end, prev } = ranges(period);
@@ -96,7 +96,7 @@ export default function DashboardPage() {
       .map((i) => ({ inv: i, left: remaining(i), days: daysUntil(i.dueDate) }));
 
     const pending = sum(open.filter((i) => !isLate(i)), remaining);
-    const paidTotal = sum(real, (i) => Math.min(i.paidAmount, computeTotals(i.items).totalTTC));
+    const paidTotal = sum(real, (i) => Math.min(i.paidAmount + (i.creditNotesApplied ?? 0), computeTotals(i.items).totalTTC));
     const split = { paid: paidTotal, pending, late: lateTotal };
 
     const months = Array.from({ length: 6 }, (_, k) => {

@@ -39,18 +39,26 @@ export default function PaymentFormPage() {
     ? (clients ?? []).find((c) => c.id === selectedInvoice.clientId)
     : null;
   const remaining = selectedInvoice
-    ? computeTotals(selectedInvoice.items).totalTTC - selectedInvoice.paidAmount
+    ? computeTotals(selectedInvoice.items).totalTTC - selectedInvoice.paidAmount - (selectedInvoice.creditNotesApplied ?? 0)
     : 0;
 
   useEffect(() => {
     if (remaining > 0 && !amount) setAmount(String(remaining));
   }, [remaining, amount]);
 
+  const paymentDateError = (() => {
+    if (!selectedInvoice || !date) return null;
+    if (date > toISODate()) return "La date de paiement ne peut pas être dans le futur";
+    if (date < selectedInvoice.date) return "La date de paiement ne peut pas être antérieure à la date de facture";
+    return null;
+  })();
+
   const handleSave = async () => {
     const amt = Number(amount);
     if (!selectedInvoiceId) { push('error', 'Sélectionnez une facture'); return; }
     if (!amt || amt <= 0) { push('error', 'Montant invalide'); return; }
     if (amt > remaining + 0.001) { push('error', 'Montant supérieur au reste à payer'); return; }
+    if (paymentDateError) { push('error', paymentDateError); return; }
     setSaving(true);
     try {
       const inv = (invoices ?? []).find((i) => i.id === selectedInvoiceId)!;
@@ -68,10 +76,6 @@ export default function PaymentFormPage() {
         reference,
         note,
       });
-      const newPaid = inv.paidAmount + amt;
-      const total = computeTotals(inv.items).totalTTC;
-      const newStatus = newPaid >= total ? 'payee' : 'partielle';
-      await services.invoices.update(selectedInvoiceId, { paidAmount: newPaid, status: newStatus as never });
       services.activityLogs.log({
         userId: 'u1', userName: 'Administrateur',
         action: 'a enregistré un paiement de', entity: 'Paiement', details: formatCurrency(amt, settings?.currency ?? 'DA'),
@@ -109,7 +113,7 @@ export default function PaymentFormPage() {
                 <option value="">Choisir une facture à encaisser…</option>
                 {payableInvoices.map((inv) => {
                   const client = (clients ?? []).find((c) => c.id === inv.clientId);
-                  const rem = computeTotals(inv.items).totalTTC - inv.paidAmount;
+                  const rem = computeTotals(inv.items).totalTTC - inv.paidAmount - (inv.creditNotesApplied ?? 0);
                   return <option key={inv.id} value={inv.id}>{inv.number} · {client?.name} · reste {formatCurrency(rem, currency)}</option>;
                 })}
               </Select>
@@ -161,7 +165,8 @@ export default function PaymentFormPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Date"><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
+              <Field label="Date"><Input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+                className={cn(paymentDateError && 'border-red-400 focus:border-red-500 focus:ring-red-500/20')} /></Field>
               <Field label="Référence"><Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="N° chèque, virement…" /></Field>
             </div>
             <Field label="Note"><Textarea className="min-h-[56px]" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Facultatif" /></Field>
@@ -171,7 +176,7 @@ export default function PaymentFormPage() {
             <span className="hidden text-xs text-gray-400 sm:block"><span className="kbd">Entrée</span> pour valider</span>
             <div className="ml-auto flex gap-2">
               <Button variant="ghost" onClick={() => navigate(-1)}>Annuler</Button>
-              <Button onClick={handleSave} disabled={saving || !selectedInvoiceId || amt <= 0 || tooHigh}>
+              <Button onClick={handleSave} disabled={saving || !selectedInvoiceId || amt <= 0 || tooHigh || !!paymentDateError}>
                 <Save className="h-4 w-4" />{saving ? 'Enregistrement…' : amt > 0 ? `Encaisser ${formatCurrency(amt, currency)}` : 'Encaisser'}
               </Button>
             </div>

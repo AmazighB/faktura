@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Save, Building2, FileText, CreditCard, Globe, Package, RefreshCw, CheckCircle2, AlertCircle, Mail, Server, Hash, Percent, LayoutGrid } from 'lucide-react';
+import { Save, Building2, FileText, CreditCard, Globe, Package, RefreshCw, CheckCircle2, AlertCircle, Mail, Server, Hash, Percent, LayoutGrid, ListChecks, Tag, Plus, Trash2, X } from 'lucide-react';
 import { PageHeader, PageContent } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -11,13 +11,15 @@ import { useToast } from '@/app/providers/ToastProvider';
 import { useApp } from '@/app/providers/AppProvider';
 import { cn } from '@/utils/cn';
 import { ALL_MODULES, loadModuleConfig, saveModuleConfig, type ModuleConfig } from '@/utils/modules';
-import type { Settings, PaymentMethod, SmtpConfig } from '@/types';
+import type { Settings, PaymentMethod, SmtpConfig, ExpenseCategoryConfig } from '@/types';
 
 const sections = [
   { key: 'company', label: 'Entreprise', icon: Building2 },
   { key: 'billing', label: 'Facturation', icon: Percent },
   { key: 'documents', label: 'Documents', icon: FileText },
+  { key: 'documentFields', label: 'Champs & Unités', icon: ListChecks },
   { key: 'payments', label: 'Paiements', icon: CreditCard },
+  { key: 'categories', label: 'Catégories', icon: Tag },
   { key: 'email', label: 'Email (SMTP)', icon: Mail },
   { key: 'modules', label: 'Modules', icon: LayoutGrid },
   { key: 'system', label: 'Système', icon: Globe },
@@ -57,6 +59,24 @@ export default function SettingsPage() {
   const updateCompany = <K extends keyof Settings['company']>(key: K, value: Settings['company'][K]) => setForm((f) => ({ ...f!, company: { ...f!.company, [key]: value } }));
   const updateNumbering = <K extends keyof Settings['numbering']>(key: K, value: Settings['numbering'][K]) => setForm((f) => ({ ...f!, numbering: { ...f!.numbering, [key]: value } }));
   const updateSmtp = <K extends keyof SmtpConfig>(key: K, value: SmtpConfig[K]) => setForm((f) => ({ ...f!, smtp: { ...f!.smtp, [key]: value } }));
+
+  const updateDocFields = (docType: 'invoice' | 'quote', key: string, field: 'enabled' | 'required', value: boolean) =>
+    setForm((f) => {
+      const fields = f!.documentFields[docType].fields.map((fld) => fld.key === key ? { ...fld, [field]: value } : fld);
+      return { ...f!, documentFields: { ...f!.documentFields, [docType]: { ...f!.documentFields[docType], fields } } };
+    });
+
+  const updateDocUnits = (docType: 'invoice' | 'quote', units: string[]) =>
+    setForm((f) => ({ ...f!, documentFields: { ...f!.documentFields, [docType]: { ...f!.documentFields[docType], units } } }));
+
+  const updateCreditNoteReasons = (reasons: string[]) =>
+    setForm((f) => ({ ...f!, documentFields: { ...f!.documentFields, creditNote: { ...f!.documentFields.creditNote, reasons } } }));
+
+  const updateCreditNoteUnits = (units: string[]) =>
+    setForm((f) => ({ ...f!, documentFields: { ...f!.documentFields, creditNote: { ...f!.documentFields.creditNote, units } } }));
+
+  const updateExpenseCategories = (categories: ExpenseCategoryConfig[]) =>
+    setForm((f) => ({ ...f!, expenseCategories: categories }));
 
   const handleSave = async () => {
     setSaving(true);
@@ -187,6 +207,114 @@ export default function SettingsPage() {
               </div>
             )}
 
+            {section === 'documentFields' && (
+              <div className='space-y-4'>
+                {/* Invoice fields */}
+                <Card className='p-4'>
+                  <div className='mb-3 flex items-center gap-2'><FileText className='h-4 w-4 text-gray-400' /><h3 className='text-sm font-semibold'>Champs de la facture</h3></div>
+                  <div className='space-y-1.5'>
+                    {form.documentFields.invoice.fields.map((fld) => (
+                      <div key={fld.key} className='flex items-center justify-between rounded-md border border-gray-200 px-3 py-2 dark:border-gray-800'>
+                        <span className={cn('text-sm', !fld.enabled && 'text-gray-400')}>{fld.label}</span>
+                        <div className='flex items-center gap-4'>
+                          <label className='flex items-center gap-1.5 text-xs text-gray-500'><Switch checked={fld.required} onChange={(v) => updateDocFields('invoice', fld.key, 'required', v)} disabled={!fld.enabled} /> Obligatoire</label>
+                          <Switch checked={fld.enabled} onChange={(v) => updateDocFields('invoice', fld.key, 'enabled', v)} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className='mt-4'>
+                    <p className='mb-1.5 text-xs font-medium text-gray-500'>Unités disponibles</p>
+                    <div className='flex flex-wrap gap-1.5'>
+                      {form.documentFields.invoice.units.map((unit, i) => (
+                        <span key={i} className='inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs dark:border-gray-800'>
+                          {unit}
+                          <button onClick={() => updateDocUnits('invoice', form.documentFields.invoice.units.filter((_, idx) => idx !== i))} className='text-gray-400 hover:text-red-500'><X className='h-3 w-3' /></button>
+                        </span>
+                      ))}
+                      <UnitAdder onAdd={(u) => updateDocUnits('invoice', [...form.documentFields.invoice.units, u])} />
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Quote fields */}
+                <Card className='p-4'>
+                  <div className='mb-3 flex items-center gap-2'><FileText className='h-4 w-4 text-gray-400' /><h3 className='text-sm font-semibold'>Champs du devis</h3></div>
+                  <div className='space-y-1.5'>
+                    {form.documentFields.quote.fields.map((fld) => (
+                      <div key={fld.key} className='flex items-center justify-between rounded-md border border-gray-200 px-3 py-2 dark:border-gray-800'>
+                        <span className={cn('text-sm', !fld.enabled && 'text-gray-400')}>{fld.label}</span>
+                        <div className='flex items-center gap-4'>
+                          <label className='flex items-center gap-1.5 text-xs text-gray-500'><Switch checked={fld.required} onChange={(v) => updateDocFields('quote', fld.key, 'required', v)} disabled={!fld.enabled} /> Obligatoire</label>
+                          <Switch checked={fld.enabled} onChange={(v) => updateDocFields('quote', fld.key, 'enabled', v)} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className='mt-4'>
+                    <p className='mb-1.5 text-xs font-medium text-gray-500'>Unités disponibles</p>
+                    <div className='flex flex-wrap gap-1.5'>
+                      {form.documentFields.quote.units.map((unit, i) => (
+                        <span key={i} className='inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs dark:border-gray-800'>
+                          {unit}
+                          <button onClick={() => updateDocUnits('quote', form.documentFields.quote.units.filter((_, idx) => idx !== i))} className='text-gray-400 hover:text-red-500'><X className='h-3 w-3' /></button>
+                        </span>
+                      ))}
+                      <UnitAdder onAdd={(u) => updateDocUnits('quote', [...form.documentFields.quote.units, u])} />
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Credit note reasons */}
+                <Card className='p-4'>
+                  <div className='mb-3 flex items-center gap-2'><FileText className='h-4 w-4 text-gray-400' /><h3 className='text-sm font-semibold'>Motifs des avoirs</h3></div>
+                  <div className='space-y-1.5'>
+                    {form.documentFields.creditNote.reasons.map((reason, i) => (
+                      <div key={i} className='flex items-center justify-between rounded-md border border-gray-200 px-3 py-2 dark:border-gray-800'>
+                        <span className='text-sm'>{reason}</span>
+                        <button onClick={() => updateCreditNoteReasons(form.documentFields.creditNote.reasons.filter((_, idx) => idx !== i))} className='text-gray-400 hover:text-red-500'><Trash2 className='h-3.5 w-3.5' /></button>
+                      </div>
+                    ))}
+                    <ReasonAdder onAdd={(r) => updateCreditNoteReasons([...form.documentFields.creditNote.reasons, r])} />
+                  </div>
+                  <div className='mt-4'>
+                    <p className='mb-1.5 text-xs font-medium text-gray-500'>Unités disponibles (avoirs)</p>
+                    <div className='flex flex-wrap gap-1.5'>
+                      {form.documentFields.creditNote.units.map((unit, i) => (
+                        <span key={i} className='inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs dark:border-gray-800'>
+                          {unit}
+                          <button onClick={() => updateCreditNoteUnits(form.documentFields.creditNote.units.filter((_, idx) => idx !== i))} className='text-gray-400 hover:text-red-500'><X className='h-3 w-3' /></button>
+                        </span>
+                      ))}
+                      <UnitAdder onAdd={(u) => updateCreditNoteUnits([...form.documentFields.creditNote.units, u])} />
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            )}
+
+            {section === 'categories' && (
+              <Card className='p-4'>
+                <div className='mb-3 flex items-center gap-2'><Tag className='h-4 w-4 text-gray-400' /><h3 className='text-sm font-semibold'>Catégories de dépenses</h3></div>
+                <div className='space-y-1.5'>
+                  {form.expenseCategories.map((cat, i) => (
+                    <div key={cat.id} className='flex items-center justify-between rounded-md border border-gray-200 px-3 py-2 dark:border-gray-800'>
+                      <div className='flex items-center gap-2'>
+                        <span className='h-3 w-3 rounded-full' style={{ backgroundColor: cat.color }} />
+                        <span className='text-sm font-medium'>{cat.name}</span>
+                      </div>
+                      <div className='flex items-center gap-2'>
+                        <input type='color' value={cat.color} onChange={(e) => updateExpenseCategories(form.expenseCategories.map((c, idx) => idx === i ? { ...c, color: e.target.value } : c))} className='h-7 w-7 cursor-pointer rounded border border-gray-200 dark:border-gray-800' />
+                        <input type='text' value={cat.name} onChange={(e) => updateExpenseCategories(form.expenseCategories.map((c, idx) => idx === i ? { ...c, name: e.target.value } : c))} className='h-7 w-32 rounded border border-gray-200 px-2 text-xs dark:border-gray-800 dark:bg-gray-900' />
+                        <button onClick={() => updateExpenseCategories(form.expenseCategories.filter((_, idx) => idx !== i))} className='text-gray-400 hover:text-red-500'><Trash2 className='h-3.5 w-3.5' /></button>
+                      </div>
+                    </div>
+                  ))}
+                  <button onClick={() => updateExpenseCategories([...form.expenseCategories, { id: `ec${Date.now()}`, name: 'Nouvelle catégorie', color: '#6b7280' }])} className='flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 hover:border-accent-400 hover:text-accent-600 dark:border-gray-700'><Plus className='h-3.5 w-3.5' /> Ajouter une catégorie</button>
+                </div>
+              </Card>
+            )}
+
             {section === 'payments' && (
               <Card className="p-4">
                 <div className="mb-3 flex items-center gap-2"><CreditCard className="h-4 w-4 text-gray-400" /><h3 className="text-sm font-semibold">Modes de paiement</h3></div>
@@ -308,6 +436,64 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function UnitAdder({ onAdd }: { onAdd: (unit: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState('');
+  if (!editing) {
+    return (
+      <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1 rounded-md border border-dashed border-gray-300 px-2 py-1 text-xs text-gray-500 hover:border-accent-400 hover:text-accent-600 dark:border-gray-700">
+        <Plus className="h-3 w-3" /> Ajouter
+      </button>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1">
+      <input
+        autoFocus
+        type="text"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && value.trim()) { onAdd(value.trim()); setValue(''); setEditing(false); }
+          if (e.key === 'Escape') { setValue(''); setEditing(false); }
+        }}
+        onBlur={() => { if (value.trim()) { onAdd(value.trim()); } setValue(''); setEditing(false); }}
+        placeholder="unité"
+        className="h-7 w-20 rounded border border-gray-200 px-2 text-xs dark:border-gray-800 dark:bg-gray-900"
+      />
+    </span>
+  );
+}
+
+function ReasonAdder({ onAdd }: { onAdd: (reason: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState('');
+  if (!editing) {
+    return (
+      <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 hover:border-accent-400 hover:text-accent-600 dark:border-gray-700">
+        <Plus className="h-3.5 w-3.5" /> Ajouter un motif
+      </button>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        autoFocus
+        type="text"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && value.trim()) { onAdd(value.trim()); setValue(''); setEditing(false); }
+          if (e.key === 'Escape') { setValue(''); setEditing(false); }
+        }}
+        onBlur={() => { if (value.trim()) { onAdd(value.trim()); } setValue(''); setEditing(false); }}
+        placeholder="Nouveau motif..."
+        className="h-8 flex-1 rounded border border-gray-200 px-2 text-sm dark:border-gray-800 dark:bg-gray-900"
+      />
     </div>
   );
 }

@@ -48,10 +48,10 @@ export default function UnpaidPage() {
   }, [unpaidInvoices, filter]);
 
   const totals = useMemo(() => {
-    const total = filtered.reduce((s, i) => s + (computeTotals(i.items).totalTTC - i.paidAmount), 0);
+    const total = filtered.reduce((s, i) => s + Math.max(computeTotals(i.items).totalTTC - i.paidAmount - (i.creditNotesApplied ?? 0), 0), 0);
     const overdueTotal = filtered
       .filter((i) => daysUntil(i.dueDate) < 0)
-      .reduce((s, i) => s + (computeTotals(i.items).totalTTC - i.paidAmount), 0);
+      .reduce((s, i) => s + Math.max(computeTotals(i.items).totalTTC - i.paidAmount - (i.creditNotesApplied ?? 0), 0), 0);
     return { total, overdueTotal };
   }, [filtered]);
 
@@ -64,8 +64,8 @@ export default function UnpaidPage() {
       header: 'Montant dû',
       align: 'right',
       sortable: true,
-      sortValue: (i) => computeTotals(i.items).totalTTC - i.paidAmount,
-      render: (i) => <span className="font-semibold">{formatCurrency(computeTotals(i.items).totalTTC - i.paidAmount, currency)}</span>,
+      sortValue: (i) => computeTotals(i.items).totalTTC - i.paidAmount - (i.creditNotesApplied ?? 0),
+      render: (i) => <span className="font-semibold">{formatCurrency(Math.max(computeTotals(i.items).totalTTC - i.paidAmount - (i.creditNotesApplied ?? 0), 0), currency)}</span>,
     },
     {
       key: 'late',

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, Trash2, ArrowLeft, FileX } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select, Textarea } from '@/components/ui/Input';
@@ -9,23 +9,42 @@ import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
 import { useToast } from '@/app/providers/ToastProvider';
 import { computeTotals, lineHT } from '@/utils/calc';
+import { cn } from '@/utils/cn';
 import { formatCurrency, toISODate } from '@/utils/format';
 import type { CompanyInfo, DocumentItem } from '@/types';
 
 export default function CreditNoteEditorPage() {
+  const { id } = useParams();
   const navigate = useNavigate();
   const { push } = useToast();
+  const isEdit = Boolean(id);
   const [clientId, setClientId] = useState('');
   const [invoiceId, setInvoiceId] = useState('');
+  const [invoiceNumber, setInvoiceNumber] = useState('');
   const [date, setDate] = useState(toISODate());
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<DocumentItem[]>([]);
   const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   const { data: clients } = useAsync(() => services.clients.list(), []);
   const { data: invoices } = useAsync(() => services.invoices.list(), []);
   const { data: settings } = useAsync(() => services.settings.get(), []);
+  const { data: existingCn } = useAsync(() => (id ? services.creditNotes.get(id) : Promise.resolve(null)), [id]);
+
+  // Load existing credit note for editing
+  useEffect(() => {
+    if (!isEdit || !existingCn || loaded) return;
+    setClientId(existingCn.clientId);
+    setInvoiceId(existingCn.invoiceId);
+    setInvoiceNumber(existingCn.invoiceNumber);
+    setDate(existingCn.date.split('T')[0]);
+    setReason(existingCn.reason);
+    setNotes(existingCn.notes ?? '');
+    setItems(existingCn.items.map((item) => ({ ...item, id: Math.random().toString(36).slice(2) })));
+    setLoaded(true);
+  }, [isEdit, existingCn, loaded]);
 
   const company = settings?.company ?? ({} as CompanyInfo);
   const currency = settings?.currency ?? 'DA';
@@ -41,6 +60,7 @@ export default function CreditNoteEditorPage() {
     setInvoiceId(invId);
     const inv = (invoices ?? []).find((i) => i.id === invId);
     if (inv) {
+      setInvoiceNumber(inv.number);
       setItems(inv.items.map((item) => ({ ...item, id: Math.random().toString(36).slice(2) })));
     }
   };
@@ -72,31 +92,53 @@ export default function CreditNoteEditorPage() {
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const linkedInvoice = (invoices ?? []).find((i) => i.id === invoiceId);
+  const dateError = linkedInvoice && date && date < linkedInvoice.date
+    ? "La date de l'avoir ne peut pas être antérieure à la date de la facture"
+    : null;
+
   const handleSave = async (status: 'brouillon' | 'emis') => {
     if (!clientId) { push('error', 'Sélectionnez un client'); return; }
     if (!invoiceId) { push('error', 'Sélectionnez une facture'); return; }
     if (!reason.trim()) { push('error', 'Le motif est obligatoire'); return; }
     if (items.length === 0 || items.every((i) => !i.designation)) { push('error', 'Ajoutez au moins une ligne'); return; }
+    if (dateError) { push('error', dateError); return; }
     setSaving(true);
     try {
-      const inv = (invoices ?? []).find((i) => i.id === invoiceId)!;
-      const year = new Date().getFullYear();
-      const allCns = await services.creditNotes.list();
-      const seq = String(allCns.length + 1).padStart(4, '0');
-      await services.creditNotes.create({
-        number: `AV-${year}-${seq}`,
-        clientId,
-        invoiceId,
-        invoiceNumber: inv.number,
-        date,
-        items: items.filter((i) => i.designation.trim()),
-        reason,
-        notes,
-        status,
-        appliedAmount: 0,
-      });
-      push('success', status === 'brouillon' ? 'Avoir enregistré en brouillon' : 'Avoir émis');
-      navigate('/credit-notes');
+      const inv = (invoices ?? []).find((i) => i.id === invoiceId) ?? { number: invoiceNumber };
+      const filteredItems = items.filter((i) => i.designation.trim());
+      if (isEdit && id) {
+        await services.creditNotes.update(id, {
+          clientId,
+          invoiceId,
+          invoiceNumber: inv.number,
+          date,
+          items: filteredItems,
+          reason,
+          notes,
+          status,
+        });
+        push('success', status === 'brouillon' ? 'Avoir modifié (brouillon)' : 'Avoir émis');
+        navigate(`/credit-notes/${id}`);
+      } else {
+        const year = new Date().getFullYear();
+        const allCns = await services.creditNotes.list();
+        const seq = String(allCns.length + 1).padStart(4, '0');
+        const created = await services.creditNotes.create({
+          number: `AV-${year}-${seq}`,
+          clientId,
+          invoiceId,
+          invoiceNumber: inv.number,
+          date,
+          items: filteredItems,
+          reason,
+          notes,
+          status,
+          appliedAmount: 0,
+        });
+        push('success', status === 'brouillon' ? 'Avoir enregistré en brouillon' : 'Avoir émis');
+        navigate(`/credit-notes/${created.id}`);
+      }
     } catch {
       push('error', 'Erreur lors de la sauvegarde');
     } finally {
@@ -116,7 +158,7 @@ export default function CreditNoteEditorPage() {
           </Tooltip>
           <div className="flex items-center gap-2">
             <FileX className="h-5 w-5 text-orange-500" />
-            <h1 className="text-base font-semibold">Nouvel avoir</h1>
+            <h1 className="text-base font-semibold">{isEdit ? 'Modifier l\'avoir' : 'Nouvel avoir'}</h1>
           </div>
         </div>
 
@@ -146,18 +188,18 @@ export default function CreditNoteEditorPage() {
 
           {/* Date */}
           <Field label="Date">
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+              className={cn(dateError && 'border-red-400 focus:border-red-500 focus:ring-red-500/20')} />
           </Field>
+          {dateError && <p className="text-xs text-red-500">{dateError}</p>}
 
           {/* Reason */}
           <Field label="Motif" required>
             <Select value={reason} onChange={(e) => setReason(e.target.value)}>
               <option value="">— Sélectionner —</option>
-              <option value="Retour matériel">Retour matériel</option>
-              <option value="Erreur de facturation">Erreur de facturation</option>
-              <option value="Remise commerciale">Remise commerciale</option>
-              <option value="Annulation partielle">Annulation partielle</option>
-              <option value="Autre">Autre</option>
+              {(settings?.documentFields.creditNote.reasons ?? ['Retour matériel', 'Erreur de facturation', 'Remise commerciale', 'Annulation partielle', 'Autre']).map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
             </Select>
           </Field>
 
@@ -196,13 +238,15 @@ export default function CreditNoteEditorPage() {
                     </div>
                   </div>
                   <div className="mt-1.5 flex items-center justify-between">
-                    <input
-                      type="text"
+                    <select
                       value={item.unit}
                       onChange={(e) => updateLine(idx, 'unit', e.target.value)}
-                      placeholder="unité"
-                      className="h-6 w-20 rounded border border-gray-200 px-1.5 text-xs dark:border-gray-700 dark:bg-gray-900"
-                    />
+                      className="h-6 w-20 rounded border border-gray-200 px-1 text-xs dark:border-gray-700 dark:bg-gray-900"
+                    >
+                      {(settings?.documentFields.creditNote.units ?? ['unité', 'heure', 'jour', 'mois', 'mètre', 'forfait']).map((u) => (
+                        <option key={u} value={u}>{u}</option>
+                      ))}
+                    </select>
                     <button onClick={() => removeLine(idx)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20" aria-label="Supprimer la ligne">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -240,7 +284,7 @@ export default function CreditNoteEditorPage() {
       <div className="flex-1 overflow-y-auto scrollbar-thin bg-gray-100 p-4 dark:bg-gray-950 lg:p-6">
         <DocumentPreview
           type="avoir"
-          number="AV-2026-—"
+          number={isEdit && existingCn ? existingCn.number : 'AV-2026-—'}
           date={date}
           dueDateOrExpiry={date}
           client={selectedClient}

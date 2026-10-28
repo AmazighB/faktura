@@ -3,7 +3,7 @@ import type { CreditNoteService, ListParams } from '@/services/types';
 import { mockCreditNotes } from '@/mocks/data';
 import { delay, uid, matchesSearch, clone } from '@/mocks/helpers';
 import { invoiceService } from '@/mocks/invoiceService';
-import { calcInvoiceTotals } from '@/utils/calc';
+import { calcInvoiceTotals, lineTTC } from '@/utils/calc';
 
 class MockCreditNoteService implements CreditNoteService {
   private creditNotes: CreditNote[] = clone(mockCreditNotes);
@@ -82,7 +82,7 @@ class MockCreditNoteService implements CreditNoteService {
     const cn = this.creditNotes[idx];
     if (cn.status === 'applique') throw new Error('Avoir déjà appliqué');
     const appliedAmount = cn.items.reduce(
-      (sum, item) => sum + item.quantity * item.unitPrice * (1 + item.vatRate / 100),
+      (sum, item) => sum + lineTTC(item),
       0,
     );
     cn.status = 'applique' as CreditNoteStatus;

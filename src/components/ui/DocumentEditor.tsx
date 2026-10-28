@@ -163,6 +163,11 @@ export function DocumentEditor({ type, documentId, onSave, initialNumber, initia
     push('success', 'Client créé');
   };
 
+  const dateError = dueDate && date && dueDate < date
+    ? type === 'devis' ? "La date de validité ne peut pas être antérieure à la date du devis"
+    : "L'échéance ne peut pas être antérieure à la date de facture"
+    : null;
+
   const handleSave = async (status: 'brouillon' | 'emise' | 'envoye') => {
     if (!clientId) {
       push('error', 'Sélectionnez un client');
@@ -170,6 +175,10 @@ export function DocumentEditor({ type, documentId, onSave, initialNumber, initia
     }
     if (items.length === 0 || items.every((i) => !i.designation)) {
       push('error', 'Ajoutez au moins une ligne');
+      return;
+    }
+    if (dateError) {
+      push('error', dateError);
       return;
     }
     setSaving(true);
@@ -272,9 +281,11 @@ export function DocumentEditor({ type, documentId, onSave, initialNumber, initia
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </Field>
             <Field label={type === 'devis' ? "Valable jusqu'au" : 'Échéance'}>
-              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
+                className={cn(dateError && 'border-red-400 focus:border-red-500 focus:ring-red-500/20')} />
             </Field>
           </div>
+          {dateError && <p className="text-xs text-red-500">{dateError}</p>}
 
           {/* Items */}
           <div>
@@ -349,13 +360,15 @@ export function DocumentEditor({ type, documentId, onSave, initialNumber, initia
                     </div>
                   </div>
                   <div className="mt-1.5 flex items-center justify-between">
-                    <input
-                      type="text"
+                    <select
                       value={item.unit}
                       onChange={(e) => updateLine(idx, 'unit', e.target.value)}
-                      placeholder="unité"
-                      className="h-6 w-20 rounded border border-gray-200 px-1.5 text-xs dark:border-gray-700 dark:bg-gray-900"
-                    />
+                      className="h-6 w-20 rounded border border-gray-200 px-1 text-xs dark:border-gray-700 dark:bg-gray-900"
+                    >
+                      {(settings?.documentFields[type === 'facture' ? 'invoice' : 'quote'].units ?? ['unité', 'heure', 'jour', 'mois', 'mètre', 'forfait']).map((u) => (
+                        <option key={u} value={u}>{u}</option>
+                      ))}
+                    </select>
                     <button onClick={() => removeLine(idx)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20" aria-label="Supprimer la ligne">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>

@@ -47,6 +47,20 @@ export default function ExpensesPage() {
   const { data: settings } = useAsync(() => services.settings.get(), []);
   const currency = settings?.currency ?? 'DA';
 
+  // Category labels and colors from settings (fall back to hardcoded)
+  const expenseCatConfig = useMemo(() => {
+    const cats = settings?.expenseCategories ?? [];
+    const labelMap: Record<string, string> = {};
+    const colorMap: Record<string, string> = {};
+    cats.forEach((c) => { labelMap[c.id] = c.name; colorMap[c.id] = c.color; });
+    // Merge with built-in labels for backward compat
+    Object.entries(expenseCategoryLabels).forEach(([k, v]) => { if (!labelMap[k]) labelMap[k] = v; });
+    Object.entries(expenseCategoryDot).forEach(([k, v]) => { if (!colorMap[k]) colorMap[k] = v; });
+    return { labelMap, colorMap };
+  }, [settings]);
+  const catLabel = (cat: string) => expenseCatConfig.labelMap[cat] ?? cat;
+  const catColor = (cat: string) => expenseCatConfig.colorMap[cat] ?? 'bg-gray-400';
+
   const filtered = useMemo(() => {
     return (expenses ?? []).filter((e) => {
       if (categoryFilter !== 'all' && e.category !== categoryFilter) return false;
@@ -106,8 +120,8 @@ export default function ExpensesPage() {
     {
       key: 'category', header: 'Catégorie',
       render: (e) => (
-        <Badge className="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400" dot={expenseCategoryDot[e.category]}>
-          {expenseCategoryLabels[e.category]}
+        <Badge className="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400" dot={catColor(e.category)}>
+          {catLabel(e.category)}
         </Badge>
       ),
     },
@@ -156,15 +170,15 @@ export default function ExpensesPage() {
             </div>
             <div className="mt-3 flex h-2.5 gap-0.5 overflow-hidden rounded-full" role="img" aria-label="Répartition des dépenses par catégorie">
               {byCategory.map(([cat, amount]) => (
-                <div key={cat} className={cn('origin-left animate-grow-x', expenseCategoryDot[cat])} style={{ width: `${(amount / Math.max(totalExpenses, 1)) * 100}%` }} title={`${expenseCategoryLabels[cat]} : ${formatCurrency(amount, currency)}`} />
+                <div key={cat} className={cn('origin-left animate-grow-x', catColor(cat))} style={{ width: `${(amount / Math.max(totalExpenses, 1)) * 100}%` }} title={`${catLabel(cat)} : ${formatCurrency(amount, currency)}`} />
               ))}
             </div>
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
               {byCategory.map(([cat, amount]) => (
                 <button key={cat} onClick={() => setCategoryFilter(categoryFilter === cat ? 'all' : cat)} aria-pressed={categoryFilter === cat}
                   className={cn('inline-flex items-center gap-2 rounded-md px-1.5 py-0.5 text-[13px] transition-colors hover:bg-gray-100 dark:hover:bg-gray-800', categoryFilter === cat && 'bg-gray-100 font-medium dark:bg-gray-800')}>
-                  <span className={cn('h-2 w-2 rounded-full', expenseCategoryDot[cat])} />
-                  <span className="text-gray-600 dark:text-gray-300">{expenseCategoryLabels[cat]}</span>
+                  <span className={cn('h-2 w-2 rounded-full', catColor(cat))} />
+                  <span className="text-gray-600 dark:text-gray-300">{catLabel(cat)}</span>
                   <span className="num text-gray-400">{Math.round((amount / Math.max(totalExpenses, 1)) * 100)} %</span>
                 </button>
               ))}
@@ -187,7 +201,7 @@ export default function ExpensesPage() {
               <Field label="Catégorie">
                 <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
                   <option value="all">Toutes</option>
-                  {Object.entries(expenseCategoryLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                  {Object.entries(expenseCatConfig.labelMap).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
                 </Select>
               </Field>
               <Field label="Fournisseur">
@@ -234,7 +248,7 @@ export default function ExpensesPage() {
           <div className="grid grid-cols-2 gap-3">
             <Field label="Catégorie">
               <Select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as ExpenseCategory })}>
-                {Object.entries(expenseCategoryLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                {Object.entries(expenseCatConfig.labelMap).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
               </Select>
             </Field>
             <Field label="Mode de paiement">

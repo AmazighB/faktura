@@ -37,6 +37,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => loadPref('factura.theme', 'system'));
   const [locale, setLocaleState] = useState<Locale>(() => loadPref('factura.locale', 'fr'));
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => loadPref('factura.sidebarCollapsed', false));
+  const [sidebarLocked, setSidebarLockedState] = useState<boolean>(() => loadPref('factura.sidebarLocked', false));
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [moduleConfig, setModuleConfigState] = useState<ModuleConfig>(() => loadModuleConfig());
 
@@ -54,6 +55,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [sidebarCollapsed]);
 
   useEffect(() => {
+    savePref('factura.sidebarLocked', sidebarLocked);
+  }, [sidebarLocked]);
+
+  useEffect(() => {
     if (theme !== 'system') return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = () => applyTheme('system');
@@ -69,6 +74,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     t: (key: string) => translate(key, locale),
     sidebarCollapsed,
     toggleSidebar: () => setSidebarCollapsed((v) => !v),
+    sidebarLocked,
+    setSidebarLocked: setSidebarLockedState,
+    toggleSidebarLocked: () => setSidebarLockedState((v) => !v),
     mobileSidebarOpen,
     setMobileSidebarOpen,
     toggleMobileSidebar: () => setMobileSidebarOpen((v) => !v),

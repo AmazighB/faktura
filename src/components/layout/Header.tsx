@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, Sun, Moon, Monitor, Plus, FileText, Receipt, UserPlus, CreditCard, Menu, User, LogOut, ChevronDown, Zap, Package, Wallet, FileMinus, PlusIcon } from 'lucide-react';
+import { Search, Bell, Sun, Moon, Monitor, Plus, FileText, Receipt, UserPlus, CreditCard, Menu, User, LogOut, ChevronDown, Zap, Package, Wallet, FileMinus, PlusIcon, Maximize2, Minimize2 } from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useApp } from '@/app/providers/AppProvider';
 import { useAuth } from '@/app/providers/AuthProvider';
@@ -39,6 +39,18 @@ export function Header() {
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen();
+  };
 
   const { data: notifications, reload: reloadNotifs } = useAsync(() => services.notifications.list(), []);
   const { data: clients } = useAsync(() => services.clients.list(), []);
@@ -127,6 +139,15 @@ export function Header() {
         </button>
 
         <div className="ml-auto flex items-center gap-1">
+          <Tooltip label={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'} side="bottom">
+            <button
+              onClick={toggleFullscreen}
+              className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+              aria-label={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
+            >
+              {isFullscreen ? <Minimize2 className="h-[18px] w-[18px]" /> : <Maximize2 className="h-[18px] w-[18px]" />}
+            </button>
+          </Tooltip>
           <div className="relative">
             <button
               onClick={() => setQuickOpen((v) => !v)}

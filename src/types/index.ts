@@ -253,6 +253,34 @@ export interface SmtpConfig {
   enabled: boolean;
 }
 
+export interface DocumentFieldConfig {
+  key: string;
+  label: string;
+  enabled: boolean;
+  required: boolean;
+}
+
+export interface DocumentFieldsSettings {
+  invoice: {
+    fields: DocumentFieldConfig[];
+    units: string[];
+  };
+  quote: {
+    fields: DocumentFieldConfig[];
+    units: string[];
+  };
+  creditNote: {
+    reasons: string[];
+    units: string[];
+  };
+}
+
+export interface ExpenseCategoryConfig {
+  id: ID;
+  name: string;
+  color: string;
+}
+
 export interface Settings {
   company: CompanyInfo;
   numbering: NumberingConfig;
@@ -270,6 +298,8 @@ export interface Settings {
   productCategories: ProductCategory[];
   clientGroups: ClientGroup[];
   smtp: SmtpConfig;
+  documentFields: DocumentFieldsSettings;
+  expenseCategories: ExpenseCategoryConfig[];
 }
 
 export interface SoftwareUpdateInfo {

@@ -16,12 +16,12 @@ export interface Totals {
 export function lineHT(item: LineItem): number {
   const gross = item.quantity * item.unitPrice;
   const discountAmount = gross * (item.discount / 100);
-  return gross - discountAmount;
+  return round2(gross - discountAmount);
 }
 
 export function lineTTC(item: LineItem): number {
   const ht = lineHT(item);
-  return ht * (1 + item.vatRate / 100);
+  return round2(ht * (1 + item.vatRate / 100));
 }
 
 export function computeTotals(items: LineItem[]): Totals {
@@ -42,11 +42,11 @@ export function computeTotals(items: LineItem[]): Totals {
   }
 
   return {
-    subtotal,
-    discountAmount,
-    netHT,
-    vatAmount,
-    totalTTC: netHT + vatAmount,
+    subtotal: round2(subtotal),
+    discountAmount: round2(discountAmount),
+    netHT: round2(netHT),
+    vatAmount: round2(vatAmount),
+    totalTTC: round2(netHT + vatAmount),
   };
 }
 

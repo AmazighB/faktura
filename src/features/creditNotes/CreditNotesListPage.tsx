@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileX, Eye, Trash2, CheckCircle2 } from 'lucide-react';
+import { Plus, FileX, Eye, Trash2, CheckCircle2, Pencil } from 'lucide-react';
 import { PageHeader, PageContent } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Tabs } from '@/components/ui/Tabs';
@@ -80,6 +80,13 @@ export default function CreditNotesListPage() {
               <Eye className="h-3.5 w-3.5" />
             </button>
           </Tooltip>
+          {cn.status === 'brouillon' && (
+            <Tooltip label="Modifier" side="top">
+              <button onClick={() => navigate(`/credit-notes/${cn.id}/edit`)} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800" aria-label="Modifier">
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            </Tooltip>
+          )}
           {cn.status === 'brouillon' && (
             <Tooltip label="Supprimer" side="top">
               <button

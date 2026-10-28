@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Printer, CheckCircle2, FileX } from 'lucide-react';
+import { ArrowLeft, Printer, CheckCircle2, FileX, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { DocumentPreview } from '@/components/ui/DocumentPreview';
@@ -67,6 +67,9 @@ export default function CreditNoteDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => printElement('document-preview', creditNote.number)}><Printer className="h-4 w-4" /> Imprimer</Button>
+          {creditNote.status === 'brouillon' && (
+            <Button variant="outline" size="sm" onClick={() => navigate(`/credit-notes/${creditNote.id}/edit`)}><Pencil className="h-4 w-4" /> Modifier</Button>
+          )}
           {creditNote.status === 'emis' && (
             <Button size="sm" onClick={handleApply}><CheckCircle2 className="h-4 w-4" /> Appliquer</Button>
           )}

@@ -12,6 +12,9 @@ export interface AppContextValue {
   t: (key: string) => string;
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
+  sidebarLocked: boolean;
+  setSidebarLocked: (locked: boolean) => void;
+  toggleSidebarLocked: () => void;
   mobileSidebarOpen: boolean;
   setMobileSidebarOpen: (open: boolean) => void;
   toggleMobileSidebar: () => void;

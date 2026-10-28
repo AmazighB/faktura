@@ -34,7 +34,7 @@ export function formatRelative(date: string | Date): string {
 }
 
 export function daysUntil(date: string | Date): number {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = typeof date === 'string' ? new Date(date) : new Date(date.getTime());
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   d.setHours(0, 0, 0, 0);
