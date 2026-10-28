@@ -95,6 +95,7 @@ export default function ReportsPage() {
 
   const { data: invoices, loading: invLoading } = useAsync(() => services.invoices.list(), []);
   const { data: expenses, loading: expLoading } = useAsync(() => services.expenses.list(), []);
+  const { data: payments } = useAsync(() => services.payments.list(), []);
   const { data: clients } = useAsync(() => services.clients.list(), []);
   const { data: settings } = useAsync(() => services.settings.get(), []);
   const currency = settings?.currency ?? 'DA';
@@ -167,14 +168,10 @@ export default function ReportsPage() {
         const d = new Date(inv.date);
         return d.getFullYear() === m.getFullYear() && d.getMonth() === m.getMonth();
       });
-      const monthPay = (invoices ?? []).flatMap((inv) =>
-        inv.items
-          .filter(() => {
-            const d = new Date(inv.date);
-            return d.getFullYear() === m.getFullYear() && d.getMonth() === m.getMonth();
-          })
-          .map(() => 0),
-      );
+      const monthPay = (payments ?? []).filter((p) => {
+        const d = new Date(p.date);
+        return d.getFullYear() === m.getFullYear() && d.getMonth() === m.getMonth();
+      });
       const monthExp = (expenses ?? []).filter((e) => {
         const d = new Date(e.date);
         return d.getFullYear() === m.getFullYear() && d.getMonth() === m.getMonth();
@@ -182,12 +179,12 @@ export default function ReportsPage() {
       months.push({
         label,
         revenue: monthInv.reduce((s, inv) => s + computeTotals(inv.items).totalTTC, 0),
-        collected: monthPay.reduce((s, v) => s + v, 0),
+        collected: monthPay.reduce((sum, p) => sum + p.amount, 0),
         expenses: monthExp.reduce((s, e) => s + e.amountTTC, 0),
       });
     }
     return months;
-  }, [invoices, expenses]);
+  }, [invoices, expenses, payments]);
 
   const maxRevenue = Math.max(...monthlyRevenue.map((m) => Math.max(m.revenue, m.expenses)), 1);
 
@@ -340,22 +337,11 @@ export default function ReportsPage() {
         {/* ── Filter bar ──────────────────────────────────── */}
         <Card className="mb-4">
           <div className="flex flex-col gap-3 p-3 lg:flex-row lg:items-end lg:justify-between">
-            <div className="flex flex-wrap gap-1.5">
-              {periodPresets.map((preset) => (
-                <button
-                  key={preset.label}
-                  onClick={() => applyPreset(preset)}
-                  className={cn(
-                    'rounded-lg px-3 py-2 text-xs font-medium transition-all',
-                    activePreset === preset.label
-                      ? 'bg-accent-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700',
-                  )}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
+            <Tabs
+              active={activePreset}
+              onChange={(k) => { const p = periodPresets.find((x) => x.label === k); if (p) applyPreset(p); }}
+              tabs={periodPresets.map((p) => ({ key: p.label, label: p.label }))}
+            />
             <div className="flex flex-wrap items-end gap-3">
               <Field label="Du" className="w-auto">
                 <div className="relative">
@@ -407,7 +393,8 @@ export default function ReportsPage() {
         ) : (
           <>
             {/* ── Hero KPIs ───────────────────────────────── */}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <Card className="overflow-hidden">
+            <div className="grid grid-cols-1 divide-y divide-gray-200 dark:divide-gray-800 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
               <KpiCard
                 label="Chiffre d'affaires"
                 value={formatCurrency(kpis.totalBilled, currency)}
@@ -433,12 +420,13 @@ export default function ReportsPage() {
             </div>
 
             {/* ── Secondary KPIs ──────────────────────────── */}
-            <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 divide-x divide-y divide-gray-200 border-t border-gray-200 dark:divide-gray-800 dark:border-gray-800 lg:grid-cols-4 lg:divide-y-0">
               <MiniKpi label="Encaissé" value={formatCurrency(kpis.totalPaid, currency)} icon={ArrowUpRight} color="text-emerald-600" trend={trends.paid} />
               <MiniKpi label="Dépenses" value={formatCurrency(kpis.totalExpenses, currency)} icon={ArrowDownRight} color="text-gray-600" trend={trends.expenses} invertTrend />
               <MiniKpi label="Factures émises" value={String(filteredInvoices.length)} icon={FileText} color="text-accent-600" />
               <MiniKpi label="Dépenses enregistrées" value={String(filteredExpenses.length)} icon={Wallet} color="text-gray-600" />
             </div>
+            </Card>
 
             {/* ── Tabs ────────────────────────────────────── */}
             <div className="mt-4">
@@ -493,7 +481,7 @@ function TrendBadge({ value, invert }: { value: number | null; invert?: boolean 
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium',
+        'num inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium',
         isGood ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400',
       )}
     >
@@ -503,70 +491,49 @@ function TrendBadge({ value, invert }: { value: number | null; invert?: boolean 
   );
 }
 
-const accentStyles: Record<string, { icon: string; bg: string; ring: string }> = {
-  accent: { icon: 'text-accent-600', bg: 'bg-accent-50 dark:bg-accent-900/20', ring: 'ring-accent-200 dark:ring-accent-900/40' },
-  emerald: { icon: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20', ring: 'ring-emerald-200 dark:ring-emerald-900/40' },
-  red: { icon: 'text-red-600', bg: 'bg-red-50 dark:bg-red-900/20', ring: 'ring-red-200 dark:ring-red-900/40' },
-  amber: { icon: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20', ring: 'ring-amber-200 dark:ring-amber-900/40' },
+const toneClass: Record<string, string> = {
+  accent: '',
+  emerald: 'text-emerald-600 dark:text-emerald-400',
+  red: 'text-red-600 dark:text-red-400',
+  amber: 'text-amber-600 dark:text-amber-400',
 };
 
-function KpiCard({
-  label,
-  value,
-  icon: Icon,
-  trend,
-  accent,
-  subtitle,
-}: {
+function KpiCard({ label, value, trend, accent, subtitle }: {
   label: string;
   value: string;
-  icon: typeof Receipt;
+  icon?: typeof Receipt;
   trend?: number | null;
-  accent: keyof typeof accentStyles;
+  accent: keyof typeof toneClass;
   subtitle?: string;
 }) {
-  const s = accentStyles[accent];
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between">
-        <div className={cn('flex h-9 w-9 items-center justify-center rounded-lg', s.bg)}>
-          <Icon className={cn('h-4 w-4', s.icon)} />
-        </div>
+    <div className="p-5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="label-quiet">{label}</p>
         {trend !== undefined && <TrendBadge value={trend} />}
       </div>
-      <p className="mt-2.5 text-xs text-gray-500 dark:text-gray-400">{label}</p>
-      <p className="mt-0.5 text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">{value}</p>
-      {subtitle && <p className="mt-1 text-xs text-gray-400">{subtitle}</p>}
-    </Card>
+      <p className={cn('num mt-2 text-[26px] font-semibold leading-none', toneClass[accent])}>{value}</p>
+      {subtitle && <p className="mt-2 text-xs text-gray-500">{subtitle}</p>}
+    </div>
   );
 }
 
-function MiniKpi({
-  label,
-  value,
-  icon: Icon,
-  color,
-  trend,
-  invertTrend,
-}: {
+function MiniKpi({ label, value, trend, invertTrend }: {
   label: string;
   value: string;
-  icon: typeof Receipt;
-  color: string;
+  icon?: typeof Receipt;
+  color?: string;
   trend?: number | null;
   invertTrend?: boolean;
 }) {
   return (
-    <Card className="flex items-center gap-2.5 p-3">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-100 dark:bg-gray-800">
-        <Icon className={cn('h-3.5 w-3.5', color)} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
-        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{value}</p>
+    <div className="flex items-center justify-between gap-2 px-5 py-3.5">
+      <div className="min-w-0">
+        <p className="label-quiet">{label}</p>
+        <p className="num mt-0.5 text-sm font-semibold text-gray-900 dark:text-gray-100">{value}</p>
       </div>
       {trend !== undefined && <TrendBadge value={trend} invert={invertTrend} />}
-    </Card>
+    </div>
   );
 }
 
@@ -628,6 +595,7 @@ function OverviewTab({
                   <div className="pointer-events-none absolute -top-2 left-1/2 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-gray-900 px-3 py-2 text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 dark:bg-gray-700">
                     <div className="font-medium">{m.label}</div>
                     <div className="mt-1 text-accent-300">CA: {formatCurrency(m.revenue, currency)}</div>
+                    <div className="text-emerald-300">Encaissé: {formatCurrency(m.collected, currency)}</div>
                     <div className="text-red-300">Dép: {formatCurrency(m.expenses, currency)}</div>
                   </div>
                 </div>

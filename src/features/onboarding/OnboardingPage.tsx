@@ -64,56 +64,40 @@ export default function OnboardingPage() {
   const canProceed = step === 0 || step === 2 || step === 3 || (step === 1 && company.name.trim().length > 0);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4 dark:from-gray-950 dark:to-gray-900">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-gray-950">
       <div className="w-full max-w-2xl">
         {/* Logo */}
         <div className="mb-8 flex items-center justify-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent-600 text-white shadow-lg">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-900 text-white dark:bg-white dark:text-gray-900">
             <Receipt className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Factura</h1>
-            <p className="text-xs text-gray-400">Facturation Pro</p>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Factura</h1>
+            <p className="text-xs text-gray-400">Configuration de votre espace</p>
           </div>
         </div>
 
         <Card className="overflow-hidden">
-          {/* Progress bar */}
-          <div className="flex border-b border-gray-200 dark:border-gray-800">
-            {steps.map((s, idx) => (
-              <div
-                key={s.key}
-                className={cn(
-                  'flex flex-1 items-center justify-center gap-2 px-2 py-3 text-xs font-medium transition-colors',
-                  idx <= step
-                    ? 'border-b-2 border-accent-600 text-accent-600 dark:text-accent-400'
-                    : 'text-gray-400',
-                )}
-              >
-                <span
-                  className={cn(
-                    'flex h-5 w-5 items-center justify-center rounded-full text-[10px]',
-                    idx < step
-                      ? 'bg-accent-600 text-white'
-                      : idx === step
-                        ? 'bg-accent-100 text-accent-700 dark:bg-accent-900/30 dark:text-accent-300'
-                        : 'bg-gray-100 text-gray-400 dark:bg-gray-800',
-                  )}
-                >
-                  {idx < step ? <Check className="h-3 w-3" /> : idx + 1}
-                </span>
-                <span className="hidden sm:inline">{s.label}</span>
-              </div>
-            ))}
+          {/* Progression : une barre fine et l'étape en cours */}
+          <div className="px-6 pt-5 sm:px-8">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium text-gray-900 dark:text-gray-100">{steps[step]?.label}</span>
+              <span className="num text-gray-400">Étape {step + 1} sur {steps.length}</span>
+            </div>
+            <div className="mt-2 flex gap-1" role="progressbar" aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={step + 1}>
+              {steps.map((st, idx) => (
+                <div key={st.key} className={cn('h-1 flex-1 rounded-full transition-colors duration-300', idx <= step ? 'bg-accent-600' : 'bg-gray-200 dark:bg-gray-800')} />
+              ))}
+            </div>
           </div>
 
           <div className="p-6 sm:p-8">
             {step === 0 && (
               <div className="text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-50 dark:bg-accent-900/20">
-                  <Sparkles className="h-8 w-8 text-accent-600" />
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-gray-200 bg-white shadow-card dark:border-gray-800 dark:bg-gray-900">
+                  <Sparkles className="h-7 w-7 text-accent-600" />
                 </div>
-                <h2 className="mt-5 text-xl font-bold text-gray-900 dark:text-gray-100">Bienvenue sur Factura</h2>
+                <h2 className="mt-5 text-xl font-semibold text-gray-900 dark:text-gray-100">Bienvenue sur Factura</h2>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                   Votre logiciel de facturation professionnel. Configurons ensemble votre espace de travail en quelques étapes.
                 </p>
@@ -137,7 +121,7 @@ export default function OnboardingPage() {
 
             {step === 1 && (
               <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Informations de votre entreprise</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Informations de votre entreprise</h2>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Ces informations apparaîtront sur vos factures et devis.</p>
                 <div className="mt-5 space-y-4">
                   <Field label="Nom de l'entreprise" required>
@@ -160,7 +144,7 @@ export default function OnboardingPage() {
 
             {step === 2 && (
               <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Choisissez vos modules</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Choisissez vos modules</h2>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Activez uniquement ce dont vous avez besoin. Vous pourrez changer plus tard dans les paramètres.</p>
                 <div className="mt-5 space-y-2">
                   {(['core', 'sales', 'finance', 'system'] as const).map((group) => {

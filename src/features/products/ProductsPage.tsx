@@ -355,7 +355,8 @@ export default function ProductsPage() {
       </PageContent>
 
       {/* Product dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} title={editing ? 'Modifier' : 'Nouveau produit / service'} size="lg">
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} title={editing ? 'Modifier' : 'Nouveau produit / service'} size="lg" footer={<><Button variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
+            <Button onClick={handleSave} disabled={saving}>{saving ? 'Enregistrement...' : 'Enregistrer'}</Button></>}>
         <div className="space-y-4 p-5">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Référence"><Input value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} /></Field>
@@ -415,17 +416,16 @@ export default function ProductsPage() {
             </div>
             <Switch checked={form.active} onChange={(v) => setForm({ ...form, active: v })} />
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
-            <Button onClick={handleSave} disabled={saving}>{saving ? 'Enregistrement...' : 'Enregistrer'}</Button>
-          </div>
         </div>
       </Dialog>
 
       {/* Category dialog */}
-      <Dialog open={catDialogOpen} onClose={() => setCatDialogOpen(false)} title={editingCat ? 'Modifier la catégorie' : 'Nouvelle catégorie'} size="md">
+      <Dialog open={catDialogOpen} onClose={() => setCatDialogOpen(false)} title={editingCat ? 'Modifier la catégorie' : 'Nouvelle catégorie'} size="md" footer={<>
+            <Button variant="outline" onClick={() => setCatDialogOpen(false)}>Annuler</Button>
+  <Button onClick={handleSaveCategory}>{editingCat ? 'Modifier' : 'Créer'}</Button>
+</>}>
         <div className="space-y-4 p-5">
-          <Field label="Nom" required><Input value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} placeholder="Ex: Sécurité" /></Field>
+          <Field label="Nom" required><Input value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} placeholder="Ex: Sécurité" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') void handleSaveCategory(); }} /></Field>
           <Field label="Description"><Input value={catForm.description} onChange={(e) => setCatForm({ ...catForm, description: e.target.value })} /></Field>
           <Field label="Couleur">
             <div className="flex flex-wrap gap-2">
@@ -443,10 +443,11 @@ export default function ProductsPage() {
 
           {/* Existing categories list */}
           {categories.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Catégories existantes</p>
+            <div className="border-t border-gray-200 pt-4 dark:border-gray-800">
+              <p className="mb-2 text-[13px] font-medium text-gray-500">Catégories existantes <span className="num text-gray-400">({categories.length})</span></p>
+              <div className="max-h-52 space-y-1.5 overflow-y-auto pr-1 scrollbar-thin">
               {categories.map((cat) => (
-                <div key={cat.id} className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2 dark:border-gray-800">
+                <div key={cat.id} className={cn('flex items-center justify-between rounded-lg border px-3 py-2', editingCat?.id === cat.id ? 'border-accent-400 bg-accent-50/50 dark:bg-accent-500/10' : 'border-gray-200 dark:border-gray-800')}>
                   <div className="flex items-center gap-2">
                     <span className="h-3 w-3 rounded-full" style={{ backgroundColor: cat.color }} />
                     <span className="text-sm font-medium">{cat.name}</span>
@@ -454,12 +455,14 @@ export default function ProductsPage() {
                   </div>
                   <div className="flex gap-1">
                     <button
+                      aria-label="Modifier"
                       onClick={() => { setEditingCat(cat); setCatForm({ name: cat.name, color: cat.color, description: cat.description ?? '' }); }}
                       className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
                     >
                       <Edit3 className="h-3.5 w-3.5" />
                     </button>
                     <button
+                      aria-label="Supprimer"
                       onClick={() => handleDeleteCategory(cat)}
                       className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
                     >
@@ -468,13 +471,9 @@ export default function ProductsPage() {
                   </div>
                 </div>
               ))}
+              </div>
             </div>
           )}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setCatDialogOpen(false)}>Annuler</Button>
-            <Button onClick={handleSaveCategory}>{editingCat ? 'Modifier' : 'Créer'}</Button>
-          </div>
         </div>
       </Dialog>
     </div>

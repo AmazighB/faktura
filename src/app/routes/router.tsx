@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, useRouteError } from 'react-router-dom';
 import { ProtectedRoute } from '@/app/routes/ProtectedRoute';
 import { LoadingOverlay } from '@/components/feedback/Loading';
 
@@ -34,19 +34,34 @@ const withSuspense = (el: React.ReactNode) => (
   <Suspense fallback={<LoadingOverlay message="Chargement..." />}>{el}</Suspense>
 );
 
+function RouteErrorPage() {
+  const error = useRouteError();
+  const message = error instanceof Error ? error.message : 'Une erreur est survenue.';
+
+  return (
+    <main role="alert">
+      <h1>Une erreur est survenue</h1>
+      <p>{message}</p>
+    </main>
+  );
+}
+
 const router = createBrowserRouter([
   {
     path: '/login',
     element: withSuspense(<LoginPage />),
+    errorElement: <RouteErrorPage />,
   },
   {
     path: '/onboarding',
     element: withSuspense(<OnboardingPage />),
+    errorElement: <RouteErrorPage />,
   },
   {
     path: '/',
     element: <ProtectedRoute />,
     children: [
+      { errorElement: <RouteErrorPage />, children: [
       { index: true, element: withSuspense(<DashboardPage />) },
       { path: 'dashboard', element: withSuspense(<DashboardPage />) },
       { path: 'clients', element: withSuspense(<ClientsListPage />) },
@@ -77,6 +92,7 @@ const router = createBrowserRouter([
       { path: 'administration', element: withSuspense(<AdministrationPage />) },
       { path: 'profile', element: withSuspense(<ProfilePage />) },
       { path: '*', element: withSuspense(<NotFoundPage />) },
+      ] },
     ],
   },
 ]);

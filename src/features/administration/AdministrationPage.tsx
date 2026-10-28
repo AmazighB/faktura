@@ -121,11 +121,11 @@ export default function AdministrationPage() {
               const count = s.key === 'users' ? users?.length : s.key === 'logs' ? logs?.length : s.key === 'backups' ? backups?.length : undefined;
               return (
                 <button key={s.key} onClick={() => setSection(s.key)}
-                  className={cn('flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                    section === s.key ? 'bg-accent-50 text-accent-700 dark:bg-accent-900/20 dark:text-accent-300' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/50 dark:hover:text-gray-200')}
+                  className={cn('flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-[13.5px] font-medium transition-colors',
+                    section === s.key ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/50 dark:hover:text-gray-200')}
                 >
-                  <Icon className="h-4 w-4 shrink-0" /> {s.label}
-                  {count !== undefined && <span className="ml-auto rounded-full bg-gray-100 px-1.5 text-xs text-gray-500 dark:bg-gray-800 dark:text-gray-400">{count}</span>}
+                  <Icon className={cn("h-4 w-4 shrink-0", section === s.key ? "text-accent-600 dark:text-accent-400" : "text-gray-400")} /> {s.label}
+                  {count !== undefined && <span className="num ml-auto rounded-full bg-gray-200/70 px-1.5 text-xs text-gray-500 dark:bg-gray-800 dark:text-gray-400">{count}</span>}
                 </button>
               );
             })}
@@ -136,11 +136,11 @@ export default function AdministrationPage() {
             {section === 'users' && (
               <div className="space-y-4">
                 {/* Quick stats row */}
-                <div className="grid grid-cols-3 gap-3">
-                  <Card className="flex items-center gap-3 p-3"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-50 text-accent-600 dark:bg-accent-900/20 dark:text-accent-400"><Users className="h-4 w-4" /></div><div><p className="text-xs text-gray-400">Total</p><p className="text-lg font-bold text-gray-900 dark:text-gray-100">{users?.length ?? 0}</p></div></Card>
-                  <Card className="flex items-center gap-3 p-3"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"><Shield className="h-4 w-4" /></div><div><p className="text-xs text-gray-400">Actifs</p><p className="text-lg font-bold text-gray-900 dark:text-gray-100">{activeUserCount}</p></div></Card>
-                  <Card className="flex items-center gap-3 p-3"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-800"><Lock className="h-4 w-4" /></div><div><p className="text-xs text-gray-400">Inactifs</p><p className="text-lg font-bold text-gray-900 dark:text-gray-100">{(users?.length ?? 0) - activeUserCount}</p></div></Card>
-                </div>
+                <Card className="grid grid-cols-3 divide-x divide-gray-200 dark:divide-gray-800">
+                  <div className="px-5 py-4"><p className="label-quiet">Utilisateurs</p><p className="num mt-1 text-2xl font-semibold">{users?.length ?? 0}</p></div>
+                  <div className="px-5 py-4"><p className="label-quiet">Actifs</p><p className="num mt-1 text-2xl font-semibold text-emerald-600 dark:text-emerald-400">{activeUserCount}</p></div>
+                  <div className="px-5 py-4"><p className="label-quiet">Inactifs</p><p className="num mt-1 text-2xl font-semibold text-gray-500">{(users?.length ?? 0) - activeUserCount}</p></div>
+                </Card>
                 <Card>
                   {loading ? <SkeletonRows /> : (users?.length ?? 0) === 0 ? <EmptyState icon={Shield} title="Aucun utilisateur" /> : <DataTable columns={userColumns} data={users ?? []} rowKey={(u) => u.id} />}
                 </Card>
@@ -184,7 +184,7 @@ export default function AdministrationPage() {
         </div>
       </PageContent>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} title={editing ? "Modifier l'utilisateur" : 'Nouvel utilisateur'} size="lg">
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} title={editing ? "Modifier l'utilisateur" : 'Nouvel utilisateur'} size="lg" footer={<><Button variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button onClick={handleSave} disabled={saving}>{saving ? '...' : 'Enregistrer'}</Button></>}>
         <div className="max-h-[80vh] overflow-y-auto p-5">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
@@ -227,7 +227,6 @@ export default function AdministrationPage() {
                 </div>
               </div>
             )}
-            <div className="flex justify-end gap-2 pt-2"><Button variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button onClick={handleSave} disabled={saving}>{saving ? '...' : 'Enregistrer'}</Button></div>
           </div>
         </div>
       </Dialog>

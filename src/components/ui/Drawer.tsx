@@ -32,7 +32,7 @@ export function Drawer({ open, onClose, title, children, width = 'max-w-xl' }: D
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[150]" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[150]" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-gray-950/40 backdrop-blur-[2px] animate-fade-in" onClick={onClose} />
       <div
         ref={containerRef}

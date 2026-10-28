@@ -65,6 +65,12 @@ export default function ExpensesPage() {
   const hasActiveFilters = categoryFilter !== 'all' || supplierFilter !== 'all' || dateFrom || dateTo || minAmount || maxAmount;
   const clearFilters = () => { setCategoryFilter('all'); setSupplierFilter('all'); setDateFrom(''); setDateTo(''); setMinAmount(''); setMaxAmount(''); };
 
+  // Répartition par catégorie (sur les dépenses filtrées), de la plus grosse à la plus petite
+  const byCategory = useMemo(() => {
+    const map = new Map<ExpenseCategory, number>();
+    filtered.forEach((e) => map.set(e.category, (map.get(e.category) ?? 0) + e.amountTTC));
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
+  }, [filtered]);
   const totalExpenses = useMemo(() => filtered.reduce((s, e) => s + e.amountTTC, 0), [filtered]);
 
   const openNew = () => { setEditing(null); setForm(emptyExpense); setDialogOpen(true); };
@@ -142,6 +148,29 @@ export default function ExpensesPage() {
         actions={<Button onClick={openNew}><Plus className="h-4 w-4" /> Nouvelle dépense</Button>}
       />
       <PageContent>
+        {byCategory.length > 0 && (
+          <Card className="mb-5 p-5">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="label-quiet">Où part l'argent</p>
+              <p className="num text-sm font-semibold">{formatCurrency(totalExpenses, currency)}</p>
+            </div>
+            <div className="mt-3 flex h-2.5 gap-0.5 overflow-hidden rounded-full" role="img" aria-label="Répartition des dépenses par catégorie">
+              {byCategory.map(([cat, amount]) => (
+                <div key={cat} className={cn('origin-left animate-grow-x', expenseCategoryDot[cat])} style={{ width: `${(amount / Math.max(totalExpenses, 1)) * 100}%` }} title={`${expenseCategoryLabels[cat]} : ${formatCurrency(amount, currency)}`} />
+              ))}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
+              {byCategory.map(([cat, amount]) => (
+                <button key={cat} onClick={() => setCategoryFilter(categoryFilter === cat ? 'all' : cat)} aria-pressed={categoryFilter === cat}
+                  className={cn('inline-flex items-center gap-2 rounded-md px-1.5 py-0.5 text-[13px] transition-colors hover:bg-gray-100 dark:hover:bg-gray-800', categoryFilter === cat && 'bg-gray-100 font-medium dark:bg-gray-800')}>
+                  <span className={cn('h-2 w-2 rounded-full', expenseCategoryDot[cat])} />
+                  <span className="text-gray-600 dark:text-gray-300">{expenseCategoryLabels[cat]}</span>
+                  <span className="num text-gray-400">{Math.round((amount / Math.max(totalExpenses, 1)) * 100)} %</span>
+                </button>
+              ))}
+            </div>
+          </Card>
+        )}
         <Card>
           <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 p-3 dark:border-gray-800">
             <SearchInput value={search} onChange={setSearch} placeholder="Rechercher par description, fournisseur..." className="max-w-xs" />
@@ -186,7 +215,8 @@ export default function ExpensesPage() {
         </Card>
       </PageContent>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} title={editing ? 'Modifier la dépense' : 'Nouvelle dépense'} size="md">
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} title={editing ? 'Modifier la dépense' : 'Nouvelle dépense'} size="md" footer={<><Button variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
+            <Button onClick={handleSave} disabled={saving}>{saving ? 'Enregistrement...' : 'Enregistrer'}</Button></>}>
         <div className="space-y-4 p-5">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Date"><Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></Field>
@@ -219,10 +249,6 @@ export default function ExpensesPage() {
             <Field label="TTC"><Input value={formatCurrency(form.amountTTC, currency)} disabled /></Field>
           </div>
           <Field label="Note"><Textarea className="min-h-[50px]" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></Field>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
-            <Button onClick={handleSave} disabled={saving}>{saving ? 'Enregistrement...' : 'Enregistrer'}</Button>
-          </div>
         </div>
       </Dialog>
     </div>

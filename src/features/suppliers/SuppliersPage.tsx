@@ -175,7 +175,8 @@ export default function SuppliersPage() {
         </Card>
       </PageContent>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} title={editing ? 'Modifier' : 'Nouveau fournisseur'} size="md">
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} title={editing ? 'Modifier' : 'Nouveau fournisseur'} size="md" footer={<><Button variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
+            <Button onClick={handleSave} disabled={saving}>{saving ? 'Enregistrement...' : 'Enregistrer'}</Button></>}>
         <div className="space-y-4 p-5">
           <Field label="Nom / Raison sociale" required><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
           <div className="grid grid-cols-2 gap-3">
@@ -185,10 +186,6 @@ export default function SuppliersPage() {
           <Field label="Adresse"><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></Field>
           <Field label="NIF"><Input value={form.nif} onChange={(e) => setForm({ ...form, nif: e.target.value })} /></Field>
           <Field label="Notes"><Textarea className="min-h-[50px]" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
-            <Button onClick={handleSave} disabled={saving}>{saving ? 'Enregistrement...' : 'Enregistrer'}</Button>
-          </div>
         </div>
       </Dialog>
 

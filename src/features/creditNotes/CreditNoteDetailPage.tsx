@@ -50,7 +50,7 @@ export default function CreditNoteDetailPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3 dark:border-gray-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-5 py-3 dark:border-gray-800 dark:bg-gray-900">
         <div className="flex items-center gap-3">
           <Tooltip label="Retour" side="right">
             <Button variant="ghost" size="icon" onClick={() => navigate('/credit-notes')} aria-label="Retour">
@@ -59,10 +59,10 @@ export default function CreditNoteDetailPage() {
           </Tooltip>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-base font-semibold">{creditNote.number}</h1>
+              <h1 className="font-mono text-base font-semibold">{creditNote.number}</h1>
               <CreditNoteStatusBadge status={creditNote.status} />
             </div>
-            <p className="text-xs text-gray-400">{client?.name} · Facture: {creditNote.invoiceNumber}</p>
+            <p className="text-[13px] text-gray-500">{client?.name} · sur la facture <span className="font-mono">{creditNote.invoiceNumber}</span></p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -74,10 +74,10 @@ export default function CreditNoteDetailPage() {
       </div>
 
       {/* Summary bar */}
-      <div className="flex items-center gap-6 border-b border-gray-200 bg-gray-50 px-5 py-2.5 dark:border-gray-800 dark:bg-gray-900/50">
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-1 border-b border-gray-200 bg-gray-50 px-5 py-2.5 dark:border-gray-800 dark:bg-gray-900/50">
         <div className="flex items-center gap-2 text-sm">
           <span className="text-gray-500">Montant TTC:</span>
-          <span className="font-semibold text-orange-600 dark:text-orange-400">{formatCurrency(totals!.totalTTC, settings?.currency ?? 'DA')}</span>
+          <span className="num font-semibold text-orange-600 dark:text-orange-400">{formatCurrency(totals!.totalTTC, settings?.currency ?? 'DA')}</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <span className="text-gray-500">Motif:</span>
@@ -86,13 +86,13 @@ export default function CreditNoteDetailPage() {
         {creditNote.status === 'applique' && (
           <div className="flex items-center gap-2 text-sm">
             <span className="text-gray-500">Appliqué:</span>
-            <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(creditNote.appliedAmount, settings?.currency ?? 'DA')}</span>
+            <span className="num font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(creditNote.appliedAmount, settings?.currency ?? 'DA')}</span>
           </div>
         )}
       </div>
 
       {/* Document preview */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin bg-gray-100 p-6 dark:bg-gray-950">
+      <div className="flex-1 overflow-y-auto scrollbar-thin bg-gray-100 p-4 dark:bg-gray-950 sm:p-8">
         <div className="mx-auto max-w-[800px]">
           <DocumentPreview
             type="avoir"

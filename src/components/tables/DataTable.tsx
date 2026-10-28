@@ -124,6 +124,8 @@ export function DataTable<T>({
               {columns.map((col) => (
                 <th
                   key={col.key}
+                  scope="col"
+                  aria-sort={sort?.key === col.key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : col.sortable ? 'none' : undefined}
                   className={cn(
                     'px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap',
                     alignClass(col.align),
@@ -166,8 +168,10 @@ export function DataTable<T>({
                 <tr
                   key={key}
                   onClick={() => onRowClick?.(row)}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onKeyDown={onRowClick ? (e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onRowClick(row); } } : undefined}
                   className={cn(
-                    'group border-b border-gray-100 transition-colors last:border-b-0 dark:border-gray-800/60',
+                    'group focus-visible:bg-gray-50 focus-visible:ring-inset dark:focus-visible:bg-gray-800/40 border-b border-gray-100 transition-colors last:border-b-0 dark:border-gray-800/60',
                     onRowClick && 'cursor-pointer',
                     selected ? 'bg-accent-50/60 dark:bg-accent-500/10' : 'hover:bg-gray-50 dark:hover:bg-gray-800/40',
                   )}

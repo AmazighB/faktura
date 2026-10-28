@@ -91,7 +91,7 @@ export default function QuoteDetailPage() {
           ) : (
             <Button size="sm" onClick={() => navigate(`/quotes/${quote.id}/edit`)}><Edit3 className="h-4 w-4" />Modifier</Button>
           )}
-          <div className="relative">
+          <div className="relative" onKeyDown={(e) => { if (e.key === 'Escape') setMoreOpen(false); }}>
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setMoreOpen((v) => !v)} aria-label="Plus d'actions" aria-haspopup="menu" aria-expanded={moreOpen}>
               <MoreHorizontal className="h-4 w-4" />
             </Button>

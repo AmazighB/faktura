@@ -157,7 +157,7 @@ export default function InvoiceDetailPage() {
           ) : (
             <Button size="sm" onClick={() => navigate(`/invoices/${invoice.id}/edit`)}><Edit3 className="h-4 w-4" />{isDraft ? 'Terminer la facture' : 'Modifier'}</Button>
           )}
-          <div className="relative">
+          <div className="relative" onKeyDown={(e) => { if (e.key === 'Escape') setMoreOpen(false); }}>
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setMoreOpen((v) => !v)} aria-label="Plus d'actions" aria-haspopup="menu" aria-expanded={moreOpen}>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
@@ -237,7 +237,8 @@ export default function InvoiceDetailPage() {
       </div>
 
       {/* Payment dialog */}
-      <Dialog open={paymentOpen} onClose={() => setPaymentOpen(false)} title="Enregistrer un paiement" size="sm">
+      <Dialog open={paymentOpen} onClose={() => setPaymentOpen(false)} title="Enregistrer un paiement" size="sm" footer={<><Button variant="outline" onClick={() => setPaymentOpen(false)}>Annuler</Button>
+            <Button onClick={handlePayment} disabled={savingPayment}>{savingPayment ? 'Enregistrement...' : 'Enregistrer'}</Button></>}>
         <div className="space-y-4 p-5">
           <div className="rounded-md bg-gray-50 p-3 text-sm dark:bg-gray-800/50">
             <div className="flex justify-between"><span className="text-gray-500">Facture</span><span className="font-medium">{invoice.number}</span></div>
@@ -255,10 +256,6 @@ export default function InvoiceDetailPage() {
           </Field>
           <Field label="Référence"><Input value={paymentRef} onChange={(e) => setPaymentRef(e.target.value)} placeholder="N° chèque, virement..." /></Field>
           <Field label="Note"><Textarea className="min-h-[50px]" value={paymentNote} onChange={(e) => setPaymentNote(e.target.value)} /></Field>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setPaymentOpen(false)}>Annuler</Button>
-            <Button onClick={handlePayment} disabled={savingPayment}>{savingPayment ? 'Enregistrement...' : 'Enregistrer'}</Button>
-          </div>
         </div>
       </Dialog>
     </div>

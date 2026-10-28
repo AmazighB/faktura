@@ -409,14 +409,11 @@ export function DocumentEditor({ type, documentId, onSave, initialNumber, initia
       </div>
 
       {/* Quick client creation */}
-      <Dialog open={newClientOpen} onClose={() => setNewClientOpen(false)} title="Nouveau client" size="sm">
+      <Dialog open={newClientOpen} onClose={() => setNewClientOpen(false)} title="Nouveau client" size="sm" footer={<><Button variant="outline" onClick={() => setNewClientOpen(false)}>Annuler</Button>
+            <Button onClick={handleCreateClient}>Créer</Button></>}>
         <div className="space-y-3 p-5">
           <Field label="Nom" required><Input value={newClientName} onChange={(e) => setNewClientName(e.target.value)} /></Field>
           <Field label="Téléphone"><Input value={newClientPhone} onChange={(e) => setNewClientPhone(e.target.value)} /></Field>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setNewClientOpen(false)}>Annuler</Button>
-            <Button onClick={handleCreateClient}>Créer</Button>
-          </div>
         </div>
       </Dialog>
     </div>

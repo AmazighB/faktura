@@ -365,9 +365,12 @@ export default function ClientsListPage() {
       </PageContent>
 
       {/* Group dialog */}
-      <Dialog open={groupDialogOpen} onClose={() => setGroupDialogOpen(false)} title={editingGroup ? 'Modifier le groupe' : 'Nouveau groupe'} size="md">
+      <Dialog open={groupDialogOpen} onClose={() => setGroupDialogOpen(false)} title={editingGroup ? 'Modifier le groupe' : 'Nouveau groupe'} size="md" footer={<>
+            <Button variant="outline" onClick={() => setGroupDialogOpen(false)}>Annuler</Button>
+  <Button onClick={handleSaveGroup}>{editingGroup ? 'Modifier' : 'Créer'}</Button>
+</>}>
         <div className="space-y-4 p-5">
-          <Field label="Nom" required><Input value={groupForm.name} onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })} placeholder="Ex: VIP" /></Field>
+          <Field label="Nom" required><Input value={groupForm.name} onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })} placeholder="Ex: VIP" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') void handleSaveGroup(); }} /></Field>
           <Field label="Description"><Input value={groupForm.description} onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })} /></Field>
           <Field label="Couleur">
             <div className="flex flex-wrap gap-2">
@@ -384,10 +387,11 @@ export default function ClientsListPage() {
           </Field>
 
           {groups.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Groupes existants</p>
+            <div className="border-t border-gray-200 pt-4 dark:border-gray-800">
+              <p className="mb-2 text-[13px] font-medium text-gray-500">Groupes existants <span className="num text-gray-400">({groups.length})</span></p>
+              <div className="max-h-52 space-y-1.5 overflow-y-auto pr-1 scrollbar-thin">
               {groups.map((group) => (
-                <div key={group.id} className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2 dark:border-gray-800">
+                <div key={group.id} className={cn('flex items-center justify-between rounded-lg border px-3 py-2', editingGroup?.id === group.id ? 'border-accent-400 bg-accent-50/50 dark:bg-accent-500/10' : 'border-gray-200 dark:border-gray-800')}>
                   <div className="flex items-center gap-2">
                     <span className="h-3 w-3 rounded-full" style={{ backgroundColor: group.color }} />
                     <span className="text-sm font-medium">{group.name}</span>
@@ -395,12 +399,14 @@ export default function ClientsListPage() {
                   </div>
                   <div className="flex gap-1">
                     <button
+                      aria-label="Modifier"
                       onClick={() => { setEditingGroup(group); setGroupForm({ name: group.name, color: group.color, description: group.description ?? '' }); }}
                       className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
                     >
                       <Edit3 className="h-3.5 w-3.5" />
                     </button>
                     <button
+                      aria-label="Supprimer"
                       onClick={() => handleDeleteGroup(group)}
                       className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
                     >
@@ -409,13 +415,9 @@ export default function ClientsListPage() {
                   </div>
                 </div>
               ))}
+              </div>
             </div>
           )}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setGroupDialogOpen(false)}>Annuler</Button>
-            <Button onClick={handleSaveGroup}>{editingGroup ? 'Modifier' : 'Créer'}</Button>
-          </div>
         </div>
       </Dialog>
     </div>

@@ -5,6 +5,9 @@
 @tailwind utilities;
 
 @layer base {
+  /* Gris secondaires : AA (>= 4,5:1) en clair comme en sombre. Les valeurs s'inversent selon le thème. */
+  :root { --g400: 108 116 130; --g500: 88 96 112; }
+  .dark { --g400: 154 162 175; --g500: 138 146 160; }
   * { @apply border-gray-200 dark:border-gray-800; }
   html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
   body { @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100; letter-spacing: -0.006em; }

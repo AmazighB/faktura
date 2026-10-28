@@ -7,8 +7,8 @@ export default {
       colors: {
         // Neutres légèrement froids : toutes les pages existantes (gray-*) héritent du nouveau rendu
         gray: {
-          50: '#f7f8fa', 100: '#f0f2f5', 200: '#e3e6eb', 300: '#cdd2da', 400: '#9aa2af',
-          500: '#6b7482', 600: '#4b5360', 700: '#363c47', 800: '#23272f', 900: '#171a20', 950: '#0e1014',
+          50: '#f7f8fa', 100: '#f0f2f5', 200: '#e3e6eb', 300: '#cdd2da', 400: 'rgb(var(--g400) / <alpha-value>)',
+          500: 'rgb(var(--g500) / <alpha-value>)', 600: '#4b5360', 700: '#363c47', 800: '#23272f', 900: '#171a20', 950: '#0e1014',
         },
         // Accent : bleu outremer (remplace le bleu Tailwind par défaut)
         accent: {
