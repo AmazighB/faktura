@@ -38,7 +38,6 @@ export interface InvoiceService {
   update(id: string, data: Partial<Invoice>): Promise<Invoice>;
   remove(id: string): Promise<void>;
   duplicate(id: string): Promise<Invoice>;
-  createCreditNote(id: string, items?: import('@/types').DocumentItem[]): Promise<Invoice>;
 }
 
 export interface PaymentService {

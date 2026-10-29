@@ -48,9 +48,13 @@ export default function CreditNotesListPage() {
       confirmLabel: 'Appliquer',
     });
     if (ok) {
-      await services.creditNotes.apply(cn.id);
-      push('success', 'Avoir appliqué', cn.number);
-      reload();
+      try {
+        await services.creditNotes.apply(cn.id);
+        push('success', 'Avoir appliqué', cn.number);
+        reload();
+      } catch (e) {
+        push('error', e instanceof Error ? e.message : 'Application impossible');
+      }
     }
   };
 

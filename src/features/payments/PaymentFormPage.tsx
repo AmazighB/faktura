@@ -13,6 +13,7 @@ import { formatCurrency, toISODate } from '@/utils/format';
 import { paymentMethodLabels } from '@/utils/labels';
 import { cn } from '@/utils/cn';
 import type { PaymentMethod } from '@/types';
+import { amountDue } from '@/utils/invoice';
 
 export default function PaymentFormPage() {
   const { invoiceId } = useParams();
@@ -39,7 +40,7 @@ export default function PaymentFormPage() {
     ? (clients ?? []).find((c) => c.id === selectedInvoice.clientId)
     : null;
   const remaining = selectedInvoice
-    ? computeTotals(selectedInvoice.items).totalTTC - selectedInvoice.paidAmount - (selectedInvoice.creditNotesApplied ?? 0)
+    ? amountDue(selectedInvoice)
     : 0;
 
   useEffect(() => {
@@ -113,7 +114,7 @@ export default function PaymentFormPage() {
                 <option value="">Choisir une facture à encaisser…</option>
                 {payableInvoices.map((inv) => {
                   const client = (clients ?? []).find((c) => c.id === inv.clientId);
-                  const rem = computeTotals(inv.items).totalTTC - inv.paidAmount - (inv.creditNotesApplied ?? 0);
+                  const rem = amountDue(inv);
                   return <option key={inv.id} value={inv.id}>{inv.number} · {client?.name} · reste {formatCurrency(rem, currency)}</option>;
                 })}
               </Select>

@@ -103,6 +103,8 @@ export interface Quote {
   notes?: string;
   conditions?: string;
   status: QuoteStatus;
+  /** Facture créée à partir de ce devis (empêche une seconde conversion) */
+  convertedInvoiceId?: ID;
   createdAt: string;
   updatedAt: string;
 }

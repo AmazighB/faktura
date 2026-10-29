@@ -40,9 +40,13 @@ export default function CreditNoteDetailPage() {
       confirmLabel: 'Appliquer',
     });
     if (ok) {
-      await services.creditNotes.apply(creditNote.id);
-      push('success', 'Avoir appliqué', creditNote.number);
-      reload();
+      try {
+        await services.creditNotes.apply(creditNote.id);
+        push('success', 'Avoir appliqué', creditNote.number);
+        reload();
+      } catch (e) {
+        push('error', e instanceof Error ? e.message : 'Application impossible');
+      }
     }
   };
 

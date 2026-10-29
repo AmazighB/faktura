@@ -41,9 +41,13 @@ export default function QuoteDetailPage() {
       confirmLabel: 'Convertir',
     });
     if (ok) {
-      const invoice = await services.quotes.convertToInvoice(quote.id);
-      push('success', 'Devis converti en facture', invoice.number);
-      navigate(`/invoices/${invoice.id}`);
+      try {
+        const invoice = await services.quotes.convertToInvoice(quote.id);
+        push('success', 'Facture créée en brouillon', invoice.number);
+        navigate(`/invoices/${invoice.id}`);
+      } catch (e) {
+        push('error', e instanceof Error ? e.message : 'Conversion impossible');
+      }
     }
   };
 
@@ -56,12 +60,14 @@ export default function QuoteDetailPage() {
   const st = quote.status;
   // Prochaine étape logique : une seule action mise en avant
   const next =
-    st === 'accepte' ? { label: 'Convertir en facture', icon: FileCheck2, run: handleConvert }
+    quote.convertedInvoiceId ? { label: 'Voir la facture', icon: FileCheck2, run: () => navigate(`/invoices/${quote.convertedInvoiceId}`) }
+    : st === 'accepte' ? { label: 'Convertir en facture', icon: FileCheck2, run: handleConvert }
     : st === 'brouillon' ? { label: 'Marquer comme envoyé', icon: Send, run: () => handleStatusChange('envoye') }
     : st === 'envoye' || st === 'attente' ? { label: 'Marquer comme accepté', icon: Check, run: () => handleStatusChange('accepte') }
     : null;
   const hint =
-    st === 'accepte' ? 'Le client a accepté ce devis. Convertissez-le en facture en un clic.'
+    quote.convertedInvoiceId ? 'Ce devis a été converti en facture.'
+    : st === 'accepte' ? 'Le client a accepté ce devis. Convertissez-le en facture en un clic.'
     : st === 'brouillon' ? 'Ce devis est un brouillon. Relisez-le puis marquez-le comme envoyé.'
     : st === 'envoye' || st === 'attente' ? `En attente de réponse du client. Valable jusqu'au ${formatDate(quote.expiryDate)}.`
     : st === 'refuse' ? 'Le client a refusé ce devis.' : st === 'expire' ? `Ce devis a expiré le ${formatDate(quote.expiryDate)}.` : '';

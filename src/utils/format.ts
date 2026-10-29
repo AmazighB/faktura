@@ -46,7 +46,9 @@ export function isOverdue(date: string | Date): boolean {
 }
 
 export function toISODate(date: Date = new Date()): string {
-  return date.toISOString().split('T')[0];
+  // Jour calendaire local (toISOString décalerait d'un jour entre minuit et 1h en UTC+1)
+  const p = (v: number) => String(v).padStart(2, '0');
+  return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`;
 }
 
 export function addDays(date: Date, days: number): Date {

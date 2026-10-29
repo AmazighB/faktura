@@ -12,6 +12,7 @@ import { services } from '@/services';
 import { computeTotals } from '@/utils/calc';
 import { formatCurrency, formatDate, formatRelative, daysUntil } from '@/utils/format';
 import { cn } from '@/utils/cn';
+import { amountDue } from '@/utils/invoice';
 
 type Period = 'today' | 'week' | 'month' | 'quarter' | 'year';
 
@@ -70,8 +71,8 @@ export default function DashboardPage() {
   const data = useMemo(() => {
     const inv = invoices ?? [];
     const real = inv.filter((i) => i.status !== 'brouillon' && i.status !== 'annulee');
-    const remaining = (i: (typeof inv)[number]) => Math.max(computeTotals(i.items).totalTTC - i.paidAmount - (i.creditNotesApplied ?? 0), 0);
-    const isLate = (i: (typeof inv)[number]) => i.status === 'retard' || (i.status !== 'payee' && daysUntil(i.dueDate) < 0);
+    const remaining = amountDue;
+    const isLate = (i: (typeof inv)[number]) => i.status === 'retard';
 
     const { start, end, prev } = ranges(period);
     const within = (date: string, a: Date, b: Date) => { const t = new Date(date); return t >= a && t < b; };
@@ -83,6 +84,9 @@ export default function DashboardPage() {
     const collected = sum((payments ?? []).filter((p) => within(p.date, start, end)), (p) => p.amount);
     const collectedPrev = sum((payments ?? []).filter((p) => within(p.date, prev.start, prev.end)), (p) => p.amount);
     const spent = sum((expenses ?? []).filter((e) => within(e.date, start, end)), (e) => e.amountTTC);
+    // Résultat hors taxes : la TVA collectée ou payée n'est ni un produit ni une charge
+    const billedHT = sum(real.filter((i) => within(i.date, start, end)), (i) => computeTotals(i.items).netHT);
+    const spentHT = sum((expenses ?? []).filter((e) => within(e.date, start, end)), (e) => e.amountHT);
     const spentPrev = sum((expenses ?? []).filter((e) => within(e.date, prev.start, prev.end)), (e) => e.amountTTC);
 
     const open = real.filter((i) => i.status !== 'payee' && remaining(i) > 0);
@@ -110,7 +114,7 @@ export default function DashboardPage() {
     });
 
     return {
-      billed, collected, spent, owed, lateTotal, lateCount: late.length, openCount: open.length,
+      billed, collected, spent, owed, resultHT: billedHT - spentHT, lateTotal, lateCount: late.length, openCount: open.length,
       dBilled: pct(billed, billedPrev), dCollected: pct(collected, collectedPrev), dSpent: pct(spent, spentPrev),
       pendingQuotes: (quotes ?? []).filter((q) => q.status === 'envoye' || q.status === 'attente').length,
       todo, split, months,
@@ -120,7 +124,7 @@ export default function DashboardPage() {
   const maxBar = Math.max(...data.months.flatMap((m) => [m.billed, m.collected]), 1);
   const splitTotal = Math.max(data.split.paid + data.split.pending + data.split.late, 1);
   const clientName = (id: string) => (clients ?? []).find((c) => c.id === id)?.name ?? '—';
-  const result = data.collected - data.spent;
+  const result = data.resultHT;
 
   const kpis = [
     { label: 'Facturé', value: data.billed, delta: <Delta value={data.dBilled} /> },
@@ -158,7 +162,7 @@ export default function DashboardPage() {
             data.lateCount > 0 ? 'border-amber-200 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10' : 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10')}>
             <p className="flex items-center gap-2.5 text-sm font-medium text-gray-800 dark:text-gray-100">
               {data.lateCount > 0
-                ? <><AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" /><span><span className="num-amount">{money(data.lateTotal)}</span> en retard sur {data.lateCount} facture{data.lateCount > 1 ? 's' : ''}. Relancez-les en premier.</span></>
+                ? <><AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" /><span><span className="num-amount">{money(data.lateTotal)}</span> en retard sur {data.lateCount} facture{data.lateCount > 1 ? 's' : ''}. À encaisser en priorité.</span></>
                 : <><CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />Aucun retard de paiement. {data.pendingQuotes > 0 ? `${data.pendingQuotes} devis attend${data.pendingQuotes > 1 ? 'ent' : ''} une réponse.` : 'Tout est à jour.'}</>}
             </p>
             {data.lateCount > 0 && <Button size="sm" variant="outline" onClick={() => navigate('/unpaid')}>Voir les impayés</Button>}
@@ -179,7 +183,7 @@ export default function DashboardPage() {
             ))}
           </Card>
           <p className="mt-2 px-1 text-xs text-gray-500">
-            Résultat approximatif de la période : <span className={cn('num font-medium', result >= 0 ? 'text-emerald-600' : 'text-red-600')}>{result >= 0 ? '+' : '−'}{money(Math.abs(result))}</span> (encaissé − dépensé)
+            Résultat de la période (HT) : <span className={cn('num font-medium', result >= 0 ? 'text-emerald-600' : 'text-red-600')}>{result >= 0 ? '+' : '−'}{money(Math.abs(result))}</span> (facturé − dépensé, hors TVA)
           </p>
 
           <div className="mt-6 grid gap-5 lg:grid-cols-3">

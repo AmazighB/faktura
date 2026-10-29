@@ -1,8 +1,11 @@
-import type { Quote, Invoice, InvoiceStatus } from '@/types';
+import type { Quote, Invoice } from '@/types';
 import type { QuoteService, ListParams } from '@/services/types';
 import { mockQuotes } from '@/mocks/data';
 import { delay, uid, matchesSearch, clone } from '@/mocks/helpers';
 import { invoiceService } from '@/mocks/invoiceService';
+import { settingsService } from '@/mocks/miscServices';
+import { nextDocumentNumber } from '@/utils/numbering';
+import { addDays, toISODate } from '@/utils/format';
 
 class MockQuoteService implements QuoteService {
   private quotes: Quote[] = clone(mockQuotes);
@@ -22,7 +25,12 @@ class MockQuoteService implements QuoteService {
 
   async create(data: Omit<Quote, 'id' | 'createdAt' | 'updatedAt'>): Promise<Quote> {
     const now = new Date().toISOString();
-    const quote: Quote = { ...data, id: uid('q'), createdAt: now, updatedAt: now };
+    let number = data.number;
+    if (!number || this.quotes.some((q) => q.number === number)) {
+      const { numbering } = await settingsService.get();
+      number = nextDocumentNumber(this.quotes.map((q) => q.number), numbering, 'quote');
+    }
+    const quote: Quote = { ...data, number, convertedInvoiceId: undefined, id: uid('q'), createdAt: now, updatedAt: now };
     this.quotes.unshift(quote);
     return delay(quote);
   }
@@ -42,40 +50,27 @@ class MockQuoteService implements QuoteService {
   async convertToInvoice(id: string): Promise<Invoice> {
     const quote = this.quotes.find((q) => q.id === id);
     if (!quote) throw new Error('Devis introuvable');
-    const now = new Date().toISOString();
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 30);
-    const invoice: Invoice = {
-      id: uid('i'),
-      number: invoiceService._generateNumber(),
+    if (quote.convertedInvoiceId) {
+      const existing = invoiceService._internalGet(quote.convertedInvoiceId);
+      if (existing) throw new Error(`Ce devis a déjà été converti en facture ${existing.number}.`);
+    }
+    const settings = await settingsService.get();
+    const today = new Date();
+    // La facture est créée en brouillon : relecture possible avant l'émission (qui attribue un numéro définitif).
+    const invoice = await invoiceService.create({
+      number: '',
       clientId: quote.clientId,
-      date: now,
-      dueDate: dueDate.toISOString(),
+      date: toISODate(today),
+      dueDate: toISODate(addDays(today, settings.defaultPaymentDelay ?? 30)),
       items: clone(quote.items),
       notes: quote.notes,
       conditions: quote.conditions,
-      status: 'emise' as InvoiceStatus,
+      status: 'brouillon',
       paidAmount: 0,
       creditNotesApplied: 0,
-      createdAt: now,
-      updatedAt: now,
-    };
-    // Persist to the invoice store so navigation to the new invoice works.
-    await invoiceService.create({
-      number: invoice.number,
-      clientId: invoice.clientId,
-      date: invoice.date,
-      dueDate: invoice.dueDate,
-      items: invoice.items,
-      notes: invoice.notes,
-      conditions: invoice.conditions,
-      status: invoice.status,
-      paidAmount: invoice.paidAmount,
-      creditNotesApplied: invoice.creditNotesApplied,
     });
-    // Mark quote as accepted.
-    await this.update(id, { status: 'accepte' });
-    return delay(invoice);
+    await this.update(id, { status: 'accepte', convertedInvoiceId: invoice.id });
+    return invoice;
   }
 }
 

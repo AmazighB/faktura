@@ -13,8 +13,8 @@ import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
 import { useToast } from '@/app/providers/ToastContext';
 import { formatCurrency, formatDate, daysUntil } from '@/utils/format';
-import { computeTotals } from '@/utils/calc';
 import type { Invoice } from '@/types';
+import { amountDue } from '@/utils/invoice';
 
 type Filter = 'all' | 'upcoming' | 'overdue' | 'partial';
 
@@ -38,7 +38,7 @@ export default function UnpaidPage() {
 
   const filtered = useMemo(() => {
     return unpaidInvoices.filter((i) => {
-      const overdue = daysUntil(i.dueDate) < 0;
+      const overdue = i.status === 'retard';
       const partial = i.status === 'partielle';
       if (filter === 'overdue') return overdue;
       if (filter === 'upcoming') return !overdue;
@@ -48,10 +48,10 @@ export default function UnpaidPage() {
   }, [unpaidInvoices, filter]);
 
   const totals = useMemo(() => {
-    const total = filtered.reduce((s, i) => s + Math.max(computeTotals(i.items).totalTTC - i.paidAmount - (i.creditNotesApplied ?? 0), 0), 0);
+    const total = filtered.reduce((s, i) => s + amountDue(i), 0);
     const overdueTotal = filtered
       .filter((i) => daysUntil(i.dueDate) < 0)
-      .reduce((s, i) => s + Math.max(computeTotals(i.items).totalTTC - i.paidAmount - (i.creditNotesApplied ?? 0), 0), 0);
+      .reduce((s, i) => s + amountDue(i), 0);
     return { total, overdueTotal };
   }, [filtered]);
 
@@ -64,8 +64,8 @@ export default function UnpaidPage() {
       header: 'Montant dû',
       align: 'right',
       sortable: true,
-      sortValue: (i) => computeTotals(i.items).totalTTC - i.paidAmount - (i.creditNotesApplied ?? 0),
-      render: (i) => <span className="font-semibold">{formatCurrency(Math.max(computeTotals(i.items).totalTTC - i.paidAmount - (i.creditNotesApplied ?? 0), 0), currency)}</span>,
+      sortValue: (i) => amountDue(i),
+      render: (i) => <span className="font-semibold">{formatCurrency(amountDue(i), currency)}</span>,
     },
     {
       key: 'late',

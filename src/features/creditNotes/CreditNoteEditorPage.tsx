@@ -121,11 +121,8 @@ export default function CreditNoteEditorPage() {
         push('success', status === 'brouillon' ? 'Avoir modifié (brouillon)' : 'Avoir émis');
         navigate(`/credit-notes/${id}`);
       } else {
-        const year = new Date().getFullYear();
-        const allCns = await services.creditNotes.list();
-        const seq = String(allCns.length + 1).padStart(4, '0');
         const created = await services.creditNotes.create({
-          number: `AV-${year}-${seq}`,
+          number: '', // attribué par le service (série unique)
           clientId,
           invoiceId,
           invoiceNumber: inv.number,

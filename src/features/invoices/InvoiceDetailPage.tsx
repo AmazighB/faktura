@@ -22,6 +22,7 @@ import { paymentMethodLabels } from '@/utils/labels';
 import type { PaymentMethod } from '@/types';
 
 import { printElement } from '@/utils/print';
+import { amountDue } from '@/utils/invoice';
 
 export default function InvoiceDetailPage() {
   const { id } = useParams();
@@ -42,7 +43,7 @@ export default function InvoiceDetailPage() {
   const { data: payments, reload: reloadPayments } = useAsync(() => (id ? services.payments.getByInvoice(id) : Promise.resolve([])), [id]);
 
   const totals = useMemo(() => (invoice ? computeTotals(invoice.items) : null), [invoice]);
-  const remaining = totals ? totals.totalTTC - (invoice?.paidAmount ?? 0) - (invoice?.creditNotesApplied ?? 0) : 0;
+  const remaining = invoice ? amountDue(invoice) : 0;
 
   if (loading) return <LoadingOverlay message="Chargement de la facture..." />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
@@ -58,12 +59,8 @@ export default function InvoiceDetailPage() {
     }
     setSavingPayment(true);
     try {
-      const allPayments = await services.payments.list();
-      const year = new Date().getFullYear();
-      const seq = String(allPayments.length + 1).padStart(4, '0');
-      const paymentNumber = `PAY-${year}-${seq}`;
       await services.payments.create({
-        number: paymentNumber,
+        number: '', // attribué par le service (série unique)
         invoiceId: invoice.id,
         clientId: invoice.clientId,
         amount,
@@ -83,8 +80,8 @@ export default function InvoiceDetailPage() {
       setPaymentNote('');
       reload();
       reloadPayments();
-    } catch {
-      push('error', 'Erreur');
+    } catch (e) {
+      push('error', e instanceof Error ? e.message : 'Erreur');
     } finally {
       setSavingPayment(false);
     }
@@ -98,9 +95,13 @@ export default function InvoiceDetailPage() {
       variant: 'danger',
     });
     if (ok) {
-      await services.invoices.update(invoice.id, { status: 'annulee' });
-      push('success', 'Facture annulée');
-      reload();
+      try {
+        await services.invoices.update(invoice.id, { status: 'annulee' });
+        push('success', 'Facture annulée');
+        reload();
+      } catch (e) {
+        push('error', e instanceof Error ? e.message : 'Erreur');
+      }
     }
   };
 
@@ -117,8 +118,13 @@ export default function InvoiceDetailPage() {
       confirmLabel: 'Créer',
     });
     if (ok) {
-      const cn = await services.invoices.createCreditNote(invoice.id);
-      push('success', 'Avoir créé', cn.number);
+      try {
+        const cn = await services.creditNotes.createFromInvoice(invoice.id);
+        push('success', 'Avoir créé', cn.number);
+        navigate(`/credit-notes/${cn.id}`);
+      } catch (e) {
+        push('error', e instanceof Error ? e.message : 'Erreur');
+      }
     }
   };
 
@@ -151,9 +157,9 @@ export default function InvoiceDetailPage() {
           <Button variant="outline" size="sm" onClick={() => printElement('document-preview', invoice.number)}><Printer className="h-4 w-4" />Imprimer</Button>
           {canPay ? (
             <Button size="sm" onClick={openPayment}><CreditCard className="h-4 w-4" />Enregistrer un paiement</Button>
-          ) : (
-            <Button size="sm" onClick={() => navigate(`/invoices/${invoice.id}/edit`)}><Edit3 className="h-4 w-4" />{isDraft ? 'Terminer la facture' : 'Modifier'}</Button>
-          )}
+          ) : isDraft ? (
+            <Button size="sm" onClick={() => navigate(`/invoices/${invoice.id}/edit`)}><Edit3 className="h-4 w-4" />Terminer la facture</Button>
+          ) : null}
           <div className="relative" onKeyDown={(e) => { if (e.key === 'Escape') setMoreOpen(false); }}>
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setMoreOpen((v) => !v)} aria-label="Plus d'actions" aria-haspopup="menu" aria-expanded={moreOpen}>
               <MoreHorizontal className="h-4 w-4" />
@@ -162,7 +168,6 @@ export default function InvoiceDetailPage() {
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setMoreOpen(false)} />
                 <div role="menu" className="absolute right-0 z-20 mt-1 w-56 rounded-xl border border-gray-200 bg-white p-1 shadow-pop animate-slide-up dark:border-gray-800 dark:bg-gray-900">
-                  {canPay && <button role="menuitem" onClick={() => { setMoreOpen(false); navigate(`/invoices/${invoice.id}/edit`); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"><Edit3 className="h-4 w-4 text-gray-400" />Modifier</button>}
                   <button role="menuitem" onClick={() => { setMoreOpen(false); void handleDuplicate(); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"><Copy className="h-4 w-4 text-gray-400" />Dupliquer</button>
                   {!isDraft && <button role="menuitem" onClick={() => { setMoreOpen(false); void handleCreateCreditNote(); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"><FileX className="h-4 w-4 text-gray-400" />Créer un avoir</button>}
                   {canCancel && (
@@ -195,6 +200,12 @@ export default function InvoiceDetailPage() {
         </div>
       )}
 
+      {!isDraft && invoice.status !== 'annulee' && (
+        <p className="border-b border-gray-200 bg-gray-50 px-5 py-2 text-[13px] text-gray-600 dark:border-gray-800 dark:bg-gray-900/50 dark:text-gray-400">
+          Facture émise : elle n'est plus modifiable. Pour la corriger, créez un avoir (menu « … »).
+        </p>
+      )}
+
       <div className="flex-1 overflow-y-auto scrollbar-thin bg-gray-100 p-4 dark:bg-gray-950 sm:p-8">
         <div className="mx-auto max-w-[800px] space-y-5">
           <DocumentPreview
@@ -210,6 +221,7 @@ export default function InvoiceDetailPage() {
             currency={settings?.currency ?? 'DA'}
             template={settings?.invoiceTemplate}
             paidAmount={invoice.paidAmount}
+            creditNotesApplied={invoice.creditNotesApplied}
           />
 
           {/* Payment history */}

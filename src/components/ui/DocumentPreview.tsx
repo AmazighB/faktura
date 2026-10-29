@@ -16,6 +16,7 @@ interface DocumentPreviewProps {
   currency: string;
   template?: 'moderne' | 'classique' | 'minimal';
   paidAmount?: number;
+  creditNotesApplied?: number;
   children?: ReactNode;
 }
 
@@ -64,9 +65,10 @@ export function DocumentPreview({
   currency,
   template = 'moderne',
   paidAmount = 0,
+  creditNotesApplied = 0,
 }: DocumentPreviewProps) {
   const totals = computeTotals(items);
-  const remaining = totals.totalTTC - paidAmount;
+  const remaining = Math.max(totals.totalTTC - paidAmount - creditNotesApplied, 0);
   const tpl = templateStyles[template] ?? templateStyles.moderne;
 
   return (
@@ -171,12 +173,20 @@ export function DocumentPreview({
             <span>Total TTC</span>
             <span className="num-amount">{formatCurrency(totals.totalTTC, currency)}</span>
           </div>
-          {paidAmount > 0 && type !== 'recu' && (
+          {(paidAmount > 0 || creditNotesApplied > 0) && type !== 'recu' && (
             <>
-              <div className="flex justify-between text-gray-600">
-                <span>Payé</span>
-                <span className="num-amount">{formatCurrency(paidAmount, currency)}</span>
-              </div>
+              {creditNotesApplied > 0 && (
+                <div className="flex justify-between text-gray-600">
+                  <span>Avoirs appliqués</span>
+                  <span className="num-amount">- {formatCurrency(creditNotesApplied, currency)}</span>
+                </div>
+              )}
+              {paidAmount > 0 && (
+                <div className="flex justify-between text-gray-600">
+                  <span>Payé</span>
+                  <span className="num-amount">{formatCurrency(paidAmount, currency)}</span>
+                </div>
+              )}
               <div className="flex justify-between font-semibold text-gray-900">
                 <span>Reste à payer</span>
                 <span className="num-amount">{formatCurrency(remaining, currency)}</span>

@@ -3,15 +3,16 @@ import type { CreditNoteService, ListParams } from '@/services/types';
 import { mockCreditNotes } from '@/mocks/data';
 import { delay, uid, matchesSearch, clone } from '@/mocks/helpers';
 import { invoiceService } from '@/mocks/invoiceService';
-import { calcInvoiceTotals, lineTTC } from '@/utils/calc';
+import { lineTTC, round2 } from '@/utils/calc';
+import { invoiceTotal, isIssued } from '@/utils/invoice';
+import { settingsService } from '@/mocks/miscServices';
+import { nextDocumentNumber } from '@/utils/numbering';
 
 class MockCreditNoteService implements CreditNoteService {
   private creditNotes: CreditNote[] = clone(mockCreditNotes);
-  private seq = mockCreditNotes.length + 1;
-
-  private nextNumber(): string {
-    const year = new Date().getFullYear();
-    return `AV-${year}-${String(this.seq++).padStart(4, '0')}`;
+  private async nextNumber(): Promise<string> {
+    const { numbering } = await settingsService.get();
+    return nextDocumentNumber(this.creditNotes.map((c) => c.number), numbering, 'creditNote');
   }
 
   async list(params?: ListParams): Promise<CreditNote[]> {
@@ -34,7 +35,7 @@ class MockCreditNoteService implements CreditNoteService {
     const now = new Date().toISOString();
     const cn: CreditNote = {
       id: uid('cn'),
-      number: this.nextNumber(),
+      number: await this.nextNumber(),
       clientId: invoice.clientId,
       invoiceId: invoice.id,
       invoiceNumber: invoice.number,
@@ -55,7 +56,7 @@ class MockCreditNoteService implements CreditNoteService {
     const now = new Date().toISOString();
     const cn: CreditNote = {
       ...data,
-      number: data.number || this.nextNumber(),
+      number: !data.number || this.creditNotes.some((c) => c.number === data.number) ? await this.nextNumber() : data.number,
       id: uid('cn'),
       createdAt: now,
       updatedAt: now,
@@ -81,32 +82,23 @@ class MockCreditNoteService implements CreditNoteService {
     if (idx === -1) throw new Error('Avoir introuvable');
     const cn = this.creditNotes[idx];
     if (cn.status === 'applique') throw new Error('Avoir déjà appliqué');
-    const appliedAmount = cn.items.reduce(
-      (sum, item) => sum + lineTTC(item),
-      0,
-    );
-    cn.status = 'applique' as CreditNoteStatus;
-    cn.appliedAmount = appliedAmount;
-    cn.updatedAt = new Date().toISOString();
 
-    // Update the linked invoice: increase creditNotesApplied and adjust paidAmount/status.
     const invoice = invoiceService._internalGet(cn.invoiceId);
-    if (invoice) {
-      const newCreditApplied = invoice.creditNotesApplied + appliedAmount;
-      const totalTTC = calcInvoiceTotals(invoice).totalTTC;
-      const effectivePaid = invoice.paidAmount + newCreditApplied;
-      let newStatus = invoice.status;
-      if (effectivePaid >= totalTTC) {
-        newStatus = 'payee';
-      } else if (effectivePaid > 0) {
-        newStatus = 'partielle';
-      }
-      invoiceService._internalUpdate(cn.invoiceId, {
-        creditNotesApplied: newCreditApplied,
-        status: newStatus,
-      });
+    if (!invoice) throw new Error('Facture introuvable');
+    if (!isIssued(invoice.status)) throw new Error('Un avoir ne peut s\'appliquer qu\'à une facture émise et non annulée.');
+
+    const amount = round2(cn.items.reduce((sum, item) => sum + lineTTC(item), 0));
+    if (!(amount > 0)) throw new Error('Le montant de l\'avoir doit être supérieur à zéro.');
+    // Plafond : le cumul des avoirs ne peut pas dépasser le total de la facture.
+    const creditable = round2(invoiceTotal(invoice) - invoice.creditNotesApplied);
+    if (amount > creditable) {
+      throw new Error(`Cet avoir (${amount.toFixed(2)}) dépasse le montant restant à créditer sur la facture (${creditable.toFixed(2)}).`);
     }
 
+    cn.status = 'applique' as CreditNoteStatus;
+    cn.appliedAmount = amount;
+    cn.updatedAt = new Date().toISOString();
+    invoiceService._internalUpdate(invoice.id, { creditNotesApplied: round2(invoice.creditNotesApplied + amount) });
     return delay(cn);
   }
 }

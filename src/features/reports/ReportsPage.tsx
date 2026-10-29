@@ -20,7 +20,7 @@ import { Field, Input, Select } from '@/components/ui/Input';
 import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
 import { useToast } from '@/app/providers/ToastContext';
-import { formatCurrency, formatDate, daysUntil, toISODate, startOfMonth, startOfYear } from '@/utils/format';
+import { formatCurrency, formatDate, toISODate, startOfMonth, startOfYear } from '@/utils/format';
 import { computeTotals } from '@/utils/calc';
 import { expenseCategoryLabels, invoiceStatusLabels } from '@/utils/labels';
 import type { Invoice, Client } from '@/types';
@@ -28,6 +28,7 @@ import { cn } from '@/utils/cn';
 import { Skeleton } from '@/components/feedback/Loading';
 import { printDocument } from '@/utils/print';
 import { exportData, type ExportColumn } from '@/utils/exportImport';
+import { amountDue } from '@/utils/invoice';
 
 type ReportTab = 'overview' | 'sales' | 'clients' | 'products' | 'expenses';
 
@@ -110,8 +111,9 @@ export default function ReportsPage() {
     setActivePreset('');
   };
 
+  // Seules les factures émises comptent (ni brouillons, ni annulées)
   const filteredInvoices = useMemo(
-    () => (invoices ?? []).filter((i) => inRange(i.date, range)),
+    () => (invoices ?? []).filter((i) => i.status !== 'brouillon' && i.status !== 'annulee' && inRange(i.date, range)),
     [invoices, range],
   );
   const filteredExpenses = useMemo(
@@ -120,17 +122,18 @@ export default function ReportsPage() {
   );
 
   const kpis = useMemo(() => {
-    const totalBilled = filteredInvoices.reduce((s, i) => s + computeTotals(i.items).totalTTC, 0);
-    const totalPaid = filteredInvoices.reduce((s, i) => s + i.paidAmount, 0);
-    const totalRemaining = totalBilled - totalPaid;
+    // Chiffre d'affaires et charges hors taxes ; « encaissé » = paiements reçus dans la période.
+    const totalBilled = filteredInvoices.reduce((s, i) => s + computeTotals(i.items).netHT, 0);
+    const totalPaid = (payments ?? []).filter((p) => inRange(p.date, range)).reduce((s, p) => s + p.amount, 0);
+    const totalRemaining = filteredInvoices.reduce((s, i) => s + amountDue(i), 0);
     const totalOverdue = filteredInvoices
-      .filter((i) => daysUntil(i.dueDate) < 0 && i.status !== 'payee' && i.status !== 'annulee')
-      .reduce((s, i) => s + (computeTotals(i.items).totalTTC - i.paidAmount), 0);
-    const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amountTTC, 0);
-    const result = totalPaid - totalExpenses;
+      .filter((i) => i.status === 'retard')
+      .reduce((s, i) => s + amountDue(i), 0);
+    const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amountHT, 0);
+    const result = totalBilled - totalExpenses;
     const margin = totalBilled > 0 ? (result / totalBilled) * 100 : 0;
     return { totalBilled, totalPaid, totalRemaining, totalOverdue, totalExpenses, result, margin };
-  }, [filteredInvoices, filteredExpenses]);
+  }, [filteredInvoices, filteredExpenses, payments, range]);
 
   const previousRange = useMemo(() => {
     const from = new Date(range.from);
@@ -142,13 +145,13 @@ export default function ReportsPage() {
   }, [range]);
 
   const previousKpis = useMemo(() => {
-    const prevInv = (invoices ?? []).filter((i) => inRange(i.date, previousRange));
+    const prevInv = (invoices ?? []).filter((i) => i.status !== 'brouillon' && i.status !== 'annulee' && inRange(i.date, previousRange));
     const prevExp = (expenses ?? []).filter((e) => inRange(e.date, previousRange));
-    const billed = prevInv.reduce((s, i) => s + computeTotals(i.items).totalTTC, 0);
-    const paid = prevInv.reduce((s, i) => s + i.paidAmount, 0);
-    const exp = prevExp.reduce((s, e) => s + e.amountTTC, 0);
-    return { billed, paid, exp, result: paid - exp };
-  }, [invoices, expenses, previousRange]);
+    const billed = prevInv.reduce((s, i) => s + computeTotals(i.items).netHT, 0);
+    const paid = (payments ?? []).filter((p) => inRange(p.date, previousRange)).reduce((s, p) => s + p.amount, 0);
+    const exp = prevExp.reduce((s, e) => s + e.amountHT, 0);
+    return { billed, paid, exp, result: billed - exp };
+  }, [invoices, expenses, payments, previousRange]);
 
   const trends = {
     billed: pctChange(kpis.totalBilled, previousKpis.billed),
@@ -216,7 +219,7 @@ export default function ReportsPage() {
     const map = new Map<string, number>();
     for (const i of filteredInvoices) {
       if (i.status === 'payee' || i.status === 'annulee' || i.status === 'brouillon') continue;
-      const remaining = computeTotals(i.items).totalTTC - i.paidAmount;
+      const remaining = amountDue(i);
       map.set(i.clientId, (map.get(i.clientId) ?? 0) + remaining);
     }
     return Array.from(map.entries())
@@ -260,7 +263,7 @@ export default function ReportsPage() {
       { key: 'status', label: 'Statut', getValue: (i: Invoice) => invoiceStatusLabels[i.status] ?? i.status },
       { key: 'total', label: 'Total TTC', getValue: (i: Invoice) => computeTotals(i.items).totalTTC },
       { key: 'paid', label: 'Encaissé', getValue: (i: Invoice) => i.paidAmount },
-      { key: 'remaining', label: 'Restant', getValue: (i: Invoice) => computeTotals(i.items).totalTTC - i.paidAmount },
+      { key: 'remaining', label: 'Restant', getValue: (i: Invoice) => amountDue(i) },
     ];
     exportData(filteredInvoices, exportColumns, `rapport_factures_${range.from}_${range.to}`, format);
     push('success', 'Export réussi', `${filteredInvoices.length} facture(s) exportée(s)`);
@@ -275,7 +278,7 @@ export default function ReportsPage() {
       </div>
       <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px;">
         <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px;">
-          <p style="font-size: 12px; color: #6b7280;">Chiffre d'affaires</p>
+          <p style="font-size: 12px; color: #6b7280;">Chiffre d'affaires HT</p>
           <p style="font-size: 24px; font-weight: bold; margin-top: 4px;">${formatCurrency(kpis.totalBilled, currency)}</p>
         </div>
         <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px;">
@@ -306,7 +309,7 @@ export default function ReportsPage() {
               <td style="padding: 8px; font-size: 13px;">${clientName(inv.clientId)}</td>
               <td style="padding: 8px; font-size: 13px;">${invoiceStatusLabels[inv.status as keyof typeof invoiceStatusLabels] ?? inv.status}</td>
               <td style="padding: 8px; font-size: 13px; text-align: right;">${formatCurrency(computeTotals(inv.items).totalTTC, currency)}</td>
-              <td style="padding: 8px; font-size: 13px; text-align: right;">${formatCurrency(computeTotals(inv.items).totalTTC - inv.paidAmount, currency)}</td>
+              <td style="padding: 8px; font-size: 13px; text-align: right;">${formatCurrency(amountDue(inv), currency)}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -404,7 +407,7 @@ export default function ReportsPage() {
             <Card className="overflow-hidden">
             <div className="grid grid-cols-1 divide-y divide-gray-200 dark:divide-gray-800 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
               <KpiCard
-                label="Chiffre d'affaires"
+                label="Chiffre d'affaires HT"
                 value={formatCurrency(kpis.totalBilled, currency)}
                 icon={Receipt}
                 trend={trends.billed}
@@ -790,7 +793,7 @@ function SalesTab({
           ) : (
             sortedInvoices.map((inv) => {
               const total = computeTotals(inv.items).totalTTC;
-              const remaining = total - inv.paidAmount;
+              const remaining = amountDue(inv);
               return (
                 <div key={inv.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/30">
                   <div className="min-w-0">

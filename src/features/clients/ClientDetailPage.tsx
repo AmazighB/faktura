@@ -13,10 +13,11 @@ import { Badge } from '@/components/ui/Badge';
 import { InvoiceStatusBadge, QuoteStatusBadge } from '@/components/ui/StatusBadge';
 import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
-import { formatCurrency, formatDate, formatRelative, daysUntil } from '@/utils/format';
+import { formatCurrency, formatDate, formatRelative } from '@/utils/format';
 import { computeTotals } from '@/utils/calc';
 import { clientTypeLabels, paymentMethodLabels } from '@/utils/labels';
 import type { Invoice, Payment, Quote } from '@/types';
+import { amountDue } from '@/utils/invoice';
 
 export default function ClientDetailPage() {
   const { id } = useParams();
@@ -33,9 +34,10 @@ export default function ClientDetailPage() {
   const clientPayments = (payments ?? []).filter((p) => p.clientId === id);
 
   const totals = useMemo(() => {
-    const totalBilled = clientInvoices.reduce((s, i) => s + computeTotals(i.items).totalTTC, 0);
-    const totalPaid = clientInvoices.reduce((s, i) => s + i.paidAmount, 0);
-    return { totalBilled, totalPaid, balance: totalBilled - totalPaid };
+    const issued = clientInvoices.filter((i) => i.status !== 'brouillon' && i.status !== 'annulee');
+    const totalBilled = issued.reduce((s, i) => s + computeTotals(i.items).totalTTC, 0);
+    const totalPaid = issued.reduce((s, i) => s + i.paidAmount, 0);
+    return { totalBilled, totalPaid, balance: issued.reduce((s, i) => s + amountDue(i), 0) };
   }, [clientInvoices]);
 
   const invoiceColumns: Column<Invoice>[] = [
@@ -66,7 +68,7 @@ export default function ClientDetailPage() {
   if (error) return <ErrorState message={error} onRetry={reload} />;
   if (!client) return <ErrorState message="Client introuvable" />;
 
-  const lateCount = clientInvoices.filter((i) => i.status !== 'payee' && i.status !== 'annulee' && i.status !== 'brouillon' && daysUntil(i.dueDate) < 0).length;
+  const lateCount = clientInvoices.filter((i) => i.status === 'retard').length;
   const fiscal = ([['NIF', client.nif], ['NIS', client.nis], ['RC', client.rc], ['AI', client.ai]] as [string, string | undefined][]).filter(([, v]) => v);
   const contact = [
     { icon: Phone, value: client.phone },

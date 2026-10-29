@@ -6,6 +6,7 @@ import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
 import { useToast } from '@/app/providers/ToastContext';
 import type { QuoteStatus, DocumentItem } from '@/types';
+import { nextDocumentNumber } from '@/utils/numbering';
 
 export default function QuoteEditorPage() {
   const { id } = useParams();
@@ -16,7 +17,7 @@ export default function QuoteEditorPage() {
   const { data: quotes } = useAsync(() => services.quotes.list(), []);
   const { data: settings } = useAsync(() => services.settings.get(), []);
 
-  const nextNumber = `${settings?.numbering.quotePrefix ?? 'DEV'}-${new Date().getFullYear()}-${String((quotes?.length ?? 0) + 1).padStart(settings?.numbering.quotePad ?? 4, '0')}`;
+  const nextNumber = settings ? nextDocumentNumber((quotes ?? []).map((x) => x.number), settings.numbering, 'quote') : '';
 
   const handleSave = async (data: {
     clientId: string;
@@ -28,6 +29,7 @@ export default function QuoteEditorPage() {
     status: 'brouillon' | 'emise' | 'envoye';
   }) => {
     const quoteStatus: QuoteStatus = data.status === 'envoye' ? 'envoye' : 'brouillon';
+    try {
     if (isEdit && id) {
       await services.quotes.update(id, {
         clientId: data.clientId,
@@ -57,6 +59,9 @@ export default function QuoteEditorPage() {
       });
       push('success', 'Devis créé');
       navigate(`/quotes/${created.id}`);
+    }
+    } catch (err) {
+      push('error', err instanceof Error ? err.message : 'Enregistrement impossible');
     }
   };
 
