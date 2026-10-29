@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, Trash2, FileCheck2, Eye, Filter, X } from 'lucide-react';
+import { Plus, FileText, Trash2, FileCheck2, Eye, Filter, X, Copy } from 'lucide-react';
 import { PageHeader, PageContent } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Tabs } from '@/components/ui/Tabs';
@@ -70,9 +70,40 @@ export default function QuotesListPage() {
       confirmLabel: 'Convertir',
     });
     if (ok) {
-      const invoice = await services.quotes.convertToInvoice(q.id);
-      push('success', 'Devis converti en facture', invoice.number);
-      navigate(`/invoices/${invoice.id}`);
+      try {
+        const invoice = await services.quotes.convertToInvoice(q.id);
+        push('success', 'Facture créée en brouillon', invoice.number);
+        navigate(`/invoices/${invoice.id}`);
+      } catch (e) {
+        push('error', e instanceof Error ? e.message : 'Conversion impossible');
+      }
+    }
+  };
+
+  const handleDuplicate = async (q: Quote) => {
+    try {
+      const copy = await services.quotes.duplicate(q.id);
+      push('success', 'Devis dupliqué', copy.number);
+      navigate(`/quotes/${copy.id}`);
+    } catch (e) {
+      push('error', e instanceof Error ? e.message : 'Duplication impossible');
+    }
+  };
+
+  const handleDelete = async (q: Quote) => {
+    const ok = await confirm({
+      title: 'Supprimer le devis',
+      message: `Voulez-vous vraiment supprimer le devis ${q.number} ?`,
+      confirmLabel: 'Supprimer',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await services.quotes.remove(q.id);
+      push('success', 'Devis supprimé');
+      reload();
+    } catch (e) {
+      push('warning', 'Suppression impossible', e instanceof Error ? e.message : undefined);
     }
   };
 
@@ -89,7 +120,7 @@ export default function QuotesListPage() {
       align: 'right',
       render: (q) => (
         <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-          {q.status === 'accepte' && (
+          {q.status === 'accepte' && !q.convertedInvoiceId && (
             <Tooltip label="Convertir en facture" side="top">
               <button onClick={() => handleConvert(q)} className="rounded p-1 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20" aria-label="Convertir en facture">
                 <FileCheck2 className="h-3.5 w-3.5" />
@@ -101,13 +132,14 @@ export default function QuotesListPage() {
               <Eye className="h-3.5 w-3.5" />
             </button>
           </Tooltip>
+          <Tooltip label="Dupliquer" side="top">
+            <button onClick={() => void handleDuplicate(q)} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800" aria-label="Dupliquer">
+              <Copy className="h-3.5 w-3.5" />
+            </button>
+          </Tooltip>
           <Tooltip label="Supprimer" side="top">
             <button
-              onClick={async () => {
-                await services.quotes.remove(q.id);
-                push('success', 'Devis supprimé');
-                reload();
-              }}
+              onClick={() => void handleDelete(q)}
               className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
               aria-label="Supprimer"
             >

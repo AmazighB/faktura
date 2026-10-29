@@ -1,10 +1,12 @@
 import type { Product } from '@/types';
 import type { ProductService, ListParams } from '@/services/types';
 import { mockProducts } from '@/mocks/data';
-import { delay, uid, matchesSearch, clone } from '@/mocks/helpers';
+import { delay, uid, matchesSearch, persistentStore } from '@/mocks/helpers';
 
 class MockProductService implements ProductService {
-  private products: Product[] = clone(mockProducts);
+  private productsStore = persistentStore<Product>('products', mockProducts);
+  private get products(): Product[] { return this.productsStore.items; }
+  private set products(v: Product[]) { this.productsStore.items = v; }
 
   async list(params?: ListParams): Promise<Product[]> {
     let result = this.products;

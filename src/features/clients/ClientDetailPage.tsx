@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Edit3, Plus, FileText, Receipt, CreditCard, Phone, Mail, Building2 } from 'lucide-react';
+import { ArrowLeft, Edit3, Plus, FileText, Receipt, CreditCard, Phone, Mail, Building2, Archive, ArchiveRestore } from 'lucide-react';
 import { PageContent } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -91,14 +91,18 @@ export default function ClientDetailPage() {
             <h1 className="truncate text-[26px] font-semibold leading-tight">{client.name}</h1>
             <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-gray-500">
               <Badge className="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">{clientTypeLabels[client.type]}</Badge>
+              {client.archived && <Badge className="bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">Archivé</Badge>}
               Dernière activité {formatRelative(client.lastActivityAt).toLowerCase()}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => navigate(`/clients/${client.id}/edit`)}><Edit3 className="h-4 w-4" />Modifier</Button>
-          <Button variant="outline" size="sm" onClick={() => navigate(`/quotes/new?client=${client.id}`)}><FileText className="h-4 w-4" />Nouveau devis</Button>
-          <Button size="sm" onClick={() => navigate(`/invoices/new?client=${client.id}`)}><Plus className="h-4 w-4" />Nouvelle facture</Button>
+          <Button variant="outline" size="sm" onClick={async () => { await services.clients.update(client.id, { archived: !client.archived }); reload(); }}>
+            {client.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}{client.archived ? 'Restaurer' : 'Archiver'}
+          </Button>
+          <Button variant="outline" size="sm" disabled={client.archived} onClick={() => navigate(`/quotes/new?client=${client.id}`)}><FileText className="h-4 w-4" />Nouveau devis</Button>
+          <Button size="sm" disabled={client.archived} onClick={() => navigate(`/invoices/new?client=${client.id}`)}><Plus className="h-4 w-4" />Nouvelle facture</Button>
         </div>
       </div>
 
@@ -129,7 +133,7 @@ export default function ClientDetailPage() {
           </div>
           {tab === 'invoices' && (
             clientInvoices.length === 0 ? (
-              <EmptyState icon={Receipt} title="Aucune facture" description="Créez la première facture de ce client." action={<Button size="sm" onClick={() => navigate(`/invoices/new?client=${client.id}`)}><Plus className="h-4 w-4" />Nouvelle facture</Button>} />
+              <EmptyState icon={Receipt} title="Aucune facture" description="Créez la première facture de ce client." action={<Button size="sm" disabled={client.archived} onClick={() => navigate(`/invoices/new?client=${client.id}`)}><Plus className="h-4 w-4" />Nouvelle facture</Button>} />
             ) : (
               <DataTable columns={invoiceColumns} data={clientInvoices} rowKey={(i) => i.id} onRowClick={(i) => navigate(`/invoices/${i.id}`)} defaultSort={{ key: 'date', dir: 'desc' }} />
             )

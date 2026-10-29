@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Users, Trash2, Edit3, X, Users2 } from 'lucide-react';
+import { Plus, Users, Trash2, Edit3, X, Users2, Archive, ArchiveRestore } from 'lucide-react';
 import { PageHeader, PageContent } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -22,6 +22,7 @@ import { clientTypeLabels } from '@/utils/labels';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { cn } from '@/utils/cn';
 import type { Client, ClientGroup } from '@/types';
+import { Tabs } from '@/components/ui/Tabs';
 
 const colorPalette = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6', '#ef4444'];
 
@@ -31,6 +32,7 @@ export default function ClientsListPage() {
   const confirm = useConfirm();
   const [search, setSearch] = useState('');
   const [groupFilter, setGroupFilter] = useState('all');
+  const [view, setView] = useState<'actifs' | 'archives'>('actifs');
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [groupForm, setGroupForm] = useState({ name: '', color: colorPalette[0], description: '' });
@@ -56,10 +58,11 @@ export default function ClientsListPage() {
 
   const filtered = useMemo(() => {
     return (clients ?? []).filter((c) => {
+      if (Boolean(c.archived) !== (view === 'archives')) return false;
       if (groupFilter !== 'all' && c.groupId !== groupFilter) return false;
       return true;
     });
-  }, [clients, groupFilter]);
+  }, [clients, groupFilter, view]);
 
   const getGroupName = (id?: string) => groups.find((g) => g.id === id)?.name;
   const getGroupColor = (id?: string) => groups.find((g) => g.id === id)?.color;
@@ -100,10 +103,25 @@ export default function ClientsListPage() {
   const handleBulkDelete = async () => {
     const ok = await confirm({ title: 'Supprimer', message: `Supprimer ${selectedKeys.length} client(s) ?`, confirmLabel: 'Supprimer', variant: 'danger' });
     if (!ok) return;
+    let removed = 0;
+    let blocked = 0;
     for (const id of selectedKeys) {
-      await services.clients.remove(id);
+      try {
+        await services.clients.remove(id);
+        removed++;
+      } catch {
+        blocked++;
+      }
     }
-    push('success', `${selectedKeys.length} client(s) supprimé(s)`);
+    if (removed > 0) push('success', `${removed} client(s) supprimé(s)`);
+    if (blocked > 0) push('warning', `${blocked} client(s) non supprimé(s)`, 'Ils ont des documents : archivez-les plutôt.');
+    setSelectedKeys([]);
+    reload();
+  };
+
+  const setArchived = async (ids: string[], archived: boolean) => {
+    for (const id of ids) await services.clients.update(id, { archived });
+    push('success', archived ? `${ids.length} client(s) archivé(s)` : `${ids.length} client(s) restauré(s)`);
     setSelectedKeys([]);
     reload();
   };
@@ -246,6 +264,15 @@ export default function ClientsListPage() {
               <Edit3 className="h-3.5 w-3.5" />
             </button>
           </Tooltip>
+          <Tooltip label={c.archived ? 'Restaurer' : 'Archiver'} side="top">
+            <button
+              onClick={() => void setArchived([c.id], !c.archived)}
+              className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+              aria-label={c.archived ? 'Restaurer' : 'Archiver'}
+            >
+              {c.archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+            </button>
+          </Tooltip>
           <Tooltip label="Supprimer" side="top">
             <button
               onClick={async () => {
@@ -256,9 +283,13 @@ export default function ClientsListPage() {
                   variant: 'danger',
                 });
                 if (ok) {
-                  await services.clients.remove(c.id);
-                  push('success', 'Client supprimé');
-                  reload();
+                  try {
+                    await services.clients.remove(c.id);
+                    push('success', 'Client supprimé');
+                    reload();
+                  } catch (e) {
+                    push('warning', 'Suppression impossible', e instanceof Error ? e.message : undefined);
+                  }
                 }
               }}
               className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
@@ -291,6 +322,14 @@ export default function ClientsListPage() {
       <PageContent>
         <Card>
           <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 p-3 dark:border-gray-800">
+            <Tabs
+              active={view}
+              onChange={(k) => { setView(k as 'actifs' | 'archives'); setSelectedKeys([]); }}
+              tabs={[
+                { key: 'actifs', label: 'Actifs', count: (clients ?? []).filter((c) => !c.archived).length },
+                { key: 'archives', label: 'Archivés', count: (clients ?? []).filter((c) => c.archived).length },
+              ]}
+            />
             <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un client..." className="max-w-xs" />
             {groups.length > 0 && (
               <Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)} className="w-auto text-xs">
@@ -327,6 +366,10 @@ export default function ClientsListPage() {
                     ))}
                   </Select>
                 )}
+                <Button variant="outline" size="sm" onClick={() => void setArchived(selectedKeys, view === 'actifs')}>
+                  {view === 'actifs' ? <Archive className="h-3.5 w-3.5" /> : <ArchiveRestore className="h-3.5 w-3.5" />}
+                  {view === 'actifs' ? 'Archiver' : 'Restaurer'}
+                </Button>
                 <Button variant="danger" size="sm" onClick={handleBulkDelete}><Trash2 className="h-3.5 w-3.5" /> Supprimer</Button>
                 <Button variant="ghost" size="sm" onClick={() => setSelectedKeys([])}><X className="h-3.5 w-3.5" /></Button>
               </div>

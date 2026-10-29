@@ -1,7 +1,7 @@
 import type { CreditNote, DocumentItem, CreditNoteStatus } from '@/types';
 import type { CreditNoteService, ListParams } from '@/services/types';
 import { mockCreditNotes } from '@/mocks/data';
-import { delay, uid, matchesSearch, clone } from '@/mocks/helpers';
+import { delay, uid, matchesSearch, clone, persistentStore } from '@/mocks/helpers';
 import { invoiceService } from '@/mocks/invoiceService';
 import { lineTTC, round2 } from '@/utils/calc';
 import { invoiceTotal, isIssued } from '@/utils/invoice';
@@ -9,7 +9,9 @@ import { settingsService } from '@/mocks/miscServices';
 import { nextDocumentNumber } from '@/utils/numbering';
 
 class MockCreditNoteService implements CreditNoteService {
-  private creditNotes: CreditNote[] = clone(mockCreditNotes);
+  private creditNotesStore = persistentStore<CreditNote>('creditNotes', mockCreditNotes);
+  private get creditNotes(): CreditNote[] { return this.creditNotesStore.items; }
+  private set creditNotes(v: CreditNote[]) { this.creditNotesStore.items = v; }
   private async nextNumber(): Promise<string> {
     const { numbering } = await settingsService.get();
     return nextDocumentNumber(this.creditNotes.map((c) => c.number), numbering, 'creditNote');
@@ -32,6 +34,7 @@ class MockCreditNoteService implements CreditNoteService {
     // Read from the live invoice store, not the static seed data.
     const invoice = invoiceService._internalGet(invoiceId);
     if (!invoice) throw new Error('Facture introuvable');
+    if (!isIssued(invoice.status)) throw new Error('Un avoir ne peut être créé que pour une facture émise.');
     const now = new Date().toISOString();
     const cn: CreditNote = {
       id: uid('cn'),

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Edit3, Printer, FileCheck2, Send, MoreHorizontal, Check, Circle } from 'lucide-react';
+import { ArrowLeft, Edit3, Printer, FileCheck2, Send, MoreHorizontal, Check, Circle, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { DocumentPreview } from '@/components/ui/DocumentPreview';
@@ -106,6 +106,7 @@ export default function QuoteDetailPage() {
                 <div className="fixed inset-0 z-10" onClick={() => setMoreOpen(false)} />
                 <div role="menu" className="absolute right-0 z-20 mt-1 w-60 rounded-xl border border-gray-200 bg-white p-1 shadow-pop animate-slide-up dark:border-gray-800 dark:bg-gray-900">
                   {next && <button role="menuitem" onClick={() => { setMoreOpen(false); navigate(`/quotes/${quote.id}/edit`); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"><Edit3 className="h-4 w-4 text-gray-400" />Modifier</button>}
+                  <button role="menuitem" onClick={async () => { setMoreOpen(false); try { const copy = await services.quotes.duplicate(quote.id); push('success', 'Devis dupliqué', copy.number); navigate(`/quotes/${copy.id}`); } catch (e) { push('error', e instanceof Error ? e.message : 'Duplication impossible'); } }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"><Copy className="h-4 w-4 text-gray-400" />Dupliquer</button>
                   <p className="px-3 pb-1 pt-2 text-xs font-medium text-gray-400">Changer le statut</p>
                   {statuses.map((x) => (
                     <button key={x} role="menuitemradio" aria-checked={st === x} onClick={() => { setMoreOpen(false); if (x !== st) void handleStatusChange(x); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">

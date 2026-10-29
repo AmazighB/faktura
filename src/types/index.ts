@@ -32,6 +32,8 @@ export interface Client {
   createdAt: string;
   updatedAt: string;
   lastActivityAt: string;
+  /** Client archivé : masqué des sélecteurs, historique conservé */
+  archived?: boolean;
 }
 
 export interface ProductCategory {
@@ -64,6 +66,14 @@ export type QuoteStatus = 'brouillon' | 'envoye' | 'attente' | 'accepte' | 'refu
 export type InvoiceStatus = 'brouillon' | 'emise' | 'partielle' | 'payee' | 'retard' | 'annulee';
 
 export type CreditNoteStatus = 'brouillon' | 'emis' | 'applique';
+
+export interface Reminder {
+  id: ID;
+  date: string;
+  channel: 'email' | 'telephone' | 'courrier';
+  templateKey?: EmailTemplateKey;
+  note?: string;
+}
 
 export interface CreditNote {
   id: ID;
@@ -121,6 +131,8 @@ export interface Invoice {
   status: InvoiceStatus;
   paidAmount: number;
   creditNotesApplied: number;
+  /** Historique des relances de paiement */
+  reminders?: Reminder[];
   createdAt: string;
   updatedAt: string;
 }

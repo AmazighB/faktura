@@ -1,17 +1,19 @@
-import type { Invoice } from '@/types';
+import type { Invoice, Reminder } from '@/types';
 import type { InvoiceService, ListParams } from '@/services/types';
 import { mockInvoices } from '@/mocks/data';
-import { delay, uid, matchesSearch, clone } from '@/mocks/helpers';
+import { delay, uid, matchesSearch, clone, persistentStore } from '@/mocks/helpers';
 import { settingsService } from '@/mocks/miscServices';
 import { amountDue, invoiceTotal, isIssued, statusFromAmounts } from '@/utils/invoice';
-import { nextDocumentNumber } from '@/utils/numbering';
+import { nextDocumentNumber, nextSequentialNumber } from '@/utils/numbering';
 import { addDays, toISODate } from '@/utils/format';
 
 /** Champs figés dès qu'une facture est émise : toute correction passe par un avoir. */
 const LOCKED_FIELDS: ('number' | 'clientId' | 'date' | 'dueDate' | 'items')[] = ['number', 'clientId', 'date', 'dueDate', 'items'];
 
 class MockInvoiceService implements InvoiceService {
-  private invoices: Invoice[] = clone(mockInvoices);
+  private invoicesStore = persistentStore<Invoice>('invoices', mockInvoices);
+  private get invoices(): Invoice[] { return this.invoicesStore.items; }
+  private set invoices(v: Invoice[]) { this.invoicesStore.items = v; }
 
   /** Le statut est toujours dérivé des montants et de l'échéance (retard calculé, jamais périmé). */
   private view(invoice: Invoice): Invoice {
@@ -22,6 +24,11 @@ class MockInvoiceService implements InvoiceService {
   async nextNumber(): Promise<string> {
     const { numbering } = await settingsService.get();
     return nextDocumentNumber(this.invoices.map((i) => i.number), numbering, 'invoice');
+  }
+
+  /** Numéro provisoire des brouillons : la série légale n'est consommée qu'à l'émission. */
+  private nextDraftNumber(): string {
+    return nextSequentialNumber(this.invoices.map((n) => n.number), 'BRO-', 4);
   }
 
   private assertIssuable(data: Pick<Invoice, 'clientId' | 'items'>) {
@@ -46,8 +53,8 @@ class MockInvoiceService implements InvoiceService {
 
   async create(data: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Invoice> {
     if (data.status !== 'brouillon') this.assertIssuable(data);
-    const taken = !data.number || this.invoices.some((i) => i.number === data.number);
-    const number = taken ? await this.nextNumber() : data.number;
+    // Brouillon : numéro provisoire (BRO-0001). Émise : numéro définitif de la série, sans trou.
+    const number = data.status === 'brouillon' ? this.nextDraftNumber() : await this.nextNumber();
     const now = new Date().toISOString();
     const invoice: Invoice = {
       ...data,
@@ -74,7 +81,12 @@ class MockInvoiceService implements InvoiceService {
       if (patch.status && patch.status !== 'brouillon' && patch.status !== 'emise') {
         throw new Error('Une facture en brouillon ne peut être qu\'enregistrée ou émise.');
       }
-      if (patch.status === 'emise') this.assertIssuable({ clientId: patch.clientId ?? current.clientId, items: patch.items ?? current.items });
+      if (patch.status === 'emise') {
+        this.assertIssuable({ clientId: patch.clientId ?? current.clientId, items: patch.items ?? current.items });
+        patch.number = await this.nextNumber(); // numéro définitif attribué à l'émission
+      } else {
+        delete patch.number; // le numéro provisoire n'est pas modifiable
+      }
     } else {
       const changed = LOCKED_FIELDS.filter((k) => k in patch && JSON.stringify(patch[k]) !== JSON.stringify(current[k]));
       if (changed.length > 0) {
@@ -115,7 +127,7 @@ class MockInvoiceService implements InvoiceService {
     const copy: Invoice = {
       ...clone(original),
       id: uid('i'),
-      number: await this.nextNumber(),
+      number: this.nextDraftNumber(),
       date: toISODate(today),
       dueDate: toISODate(addDays(today, settings.defaultPaymentDelay ?? 30)),
       status: 'brouillon',
@@ -128,6 +140,19 @@ class MockInvoiceService implements InvoiceService {
     return delay(this.view(copy));
   }
 
+  async addReminder(id: string, reminder: Omit<Reminder, 'id'>): Promise<Invoice> {
+    const idx = this.invoices.findIndex((i) => i.id === id);
+    if (idx === -1) throw new Error('Facture introuvable');
+    const current = this.invoices[idx];
+    if (!isIssued(current.status)) throw new Error('Seule une facture émise peut être relancée.');
+    this.invoices[idx] = {
+      ...current,
+      reminders: [...(current.reminders ?? []), { ...reminder, id: uid('rem') }],
+      updatedAt: new Date().toISOString(),
+    };
+    return delay(this.view(this.invoices[idx]));
+  }
+
   /** Réservé aux services de paiements et d'avoirs : met à jour les montants et recalcule le statut. */
   _internalUpdate(id: string, patch: Partial<Pick<Invoice, 'paidAmount' | 'creditNotesApplied'>>): Invoice | null {
     const idx = this.invoices.findIndex((i) => i.id === id);
@@ -136,6 +161,10 @@ class MockInvoiceService implements InvoiceService {
     next.status = statusFromAmounts(next);
     this.invoices[idx] = next;
     return next;
+  }
+
+  _internalList(): Invoice[] {
+    return [...this.invoices];
   }
 
   _internalGet(id: string): Invoice | null {

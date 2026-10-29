@@ -1,10 +1,14 @@
 import type { Client } from '@/types';
 import type { ClientService, ListParams } from '@/services/types';
 import { mockClients } from '@/mocks/data';
-import { delay, uid, matchesSearch, clone } from '@/mocks/helpers';
+import { invoiceService } from '@/mocks/invoiceService';
+import { quoteService } from '@/mocks/quoteService';
+import { delay, uid, matchesSearch, persistentStore } from '@/mocks/helpers';
 
 class MockClientService implements ClientService {
-  private clients: Client[] = clone(mockClients);
+  private clientsStore = persistentStore<Client>('clients', mockClients);
+  private get clients(): Client[] { return this.clientsStore.items; }
+  private set clients(v: Client[]) { this.clientsStore.items = v; }
 
   async list(params?: ListParams): Promise<Client[]> {
     let result = this.clients;
@@ -46,6 +50,12 @@ class MockClientService implements ClientService {
   }
 
   async remove(id: string): Promise<void> {
+    const hasDocuments =
+      invoiceService._internalList().some((i) => i.clientId === id) ||
+      quoteService._internalList().some((q) => q.clientId === id);
+    if (hasDocuments) {
+      throw new Error('Ce client a des factures ou des devis : archivez-le plutôt que de le supprimer.');
+    }
     this.clients = this.clients.filter((c) => c.id !== id);
     return delay(undefined);
   }

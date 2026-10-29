@@ -1,10 +1,12 @@
 import type { User, ActivityLog, Settings, Notification, BackupRecord } from '@/types';
 import type { UserService, ActivityLogService, SettingsService, NotificationService, BackupService } from '@/services/types';
 import { mockUsers, mockActivityLogs, mockNotifications, mockBackups, defaultSettings } from '@/mocks/data';
-import { delay, uid, clone } from '@/mocks/helpers';
+import { delay, uid, clone, persistentStore, persistentValue } from '@/mocks/helpers';
 
 class MockUserService implements UserService {
-  private users: User[] = clone(mockUsers);
+  private usersStore = persistentStore<User>('users', mockUsers);
+  private get users(): User[] { return this.usersStore.items; }
+  private set users(v: User[]) { this.usersStore.items = v; }
 
   async list(): Promise<User[]> {
     return delay([...this.users]);
@@ -30,7 +32,9 @@ class MockUserService implements UserService {
 }
 
 class MockActivityLogService implements ActivityLogService {
-  private logs: ActivityLog[] = clone(mockActivityLogs);
+  private logsStore = persistentStore<ActivityLog>('logs', mockActivityLogs);
+  private get logs(): ActivityLog[] { return this.logsStore.items; }
+  private set logs(v: ActivityLog[]) { this.logsStore.items = v; }
 
   async list(): Promise<ActivityLog[]> {
     return delay([...this.logs].sort((a, b) => b.timestamp.localeCompare(a.timestamp)));
@@ -42,7 +46,9 @@ class MockActivityLogService implements ActivityLogService {
 }
 
 class MockSettingsService implements SettingsService {
-  private settings: Settings = clone(defaultSettings);
+  private settingsStore = persistentValue<Settings>('settings', defaultSettings);
+  private get settings(): Settings { return this.settingsStore.value; }
+  private set settings(v: Settings) { this.settingsStore.value = v; }
 
   async get(): Promise<Settings> {
     return delay(clone(this.settings));
@@ -55,7 +61,9 @@ class MockSettingsService implements SettingsService {
 }
 
 class MockNotificationService implements NotificationService {
-  private notifications: Notification[] = clone(mockNotifications);
+  private notificationsStore = persistentStore<Notification>('notifications', mockNotifications);
+  private get notifications(): Notification[] { return this.notificationsStore.items; }
+  private set notifications(v: Notification[]) { this.notificationsStore.items = v; }
 
   async list(): Promise<Notification[]> {
     return delay([...this.notifications].sort((a, b) => b.timestamp.localeCompare(a.timestamp)));
@@ -74,7 +82,9 @@ class MockNotificationService implements NotificationService {
 }
 
 class MockBackupService implements BackupService {
-  private backups: BackupRecord[] = clone(mockBackups);
+  private backupsStore = persistentStore<BackupRecord>('backups', mockBackups);
+  private get backups(): BackupRecord[] { return this.backupsStore.items; }
+  private set backups(v: BackupRecord[]) { this.backupsStore.items = v; }
 
   async list(): Promise<BackupRecord[]> {
     return delay([...this.backups].sort((a, b) => b.date.localeCompare(a.date)));

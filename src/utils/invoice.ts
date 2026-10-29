@@ -42,3 +42,23 @@ export function statusFromAmounts(
 export function isIssued(status: InvoiceStatus): boolean {
   return status !== 'brouillon' && status !== 'annulee';
 }
+
+/**
+ * Situation de la facture une fois un avoir pris en compte.
+ * - `creditAlreadyApplied` : l'avoir est déjà compté dans `creditNotesApplied` de la facture.
+ * - `due` : reste à payer ; `customerCredit` : somme dont le client est créditeur (avoir supérieur à ce qui restait dû).
+ */
+export function invoiceBalanceWithCredit(
+  invoice: Amounts,
+  creditAmount: number,
+  creditAlreadyApplied: boolean,
+): { total: number; due: number; customerCredit: number } {
+  const total = invoiceTotal(invoice);
+  const credits = round2((invoice.creditNotesApplied ?? 0) + (creditAlreadyApplied ? 0 : creditAmount));
+  const settled = round2(invoice.paidAmount + credits);
+  return {
+    total,
+    due: round2(Math.max(total - settled, 0)),
+    customerCredit: round2(Math.max(settled - total, 0)),
+  };
+}

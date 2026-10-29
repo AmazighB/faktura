@@ -1,7 +1,8 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { CheckCircle2, AlertCircle, Info, XCircle, X } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { ToastContext, type Toast, type ToastType } from './ToastContext';
+import { APP_TOAST_EVENT, type NotifyType } from '@/utils/notify';
 
 export type { Toast, ToastType } from './ToastContext';
 
@@ -34,6 +35,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     },
     [dismiss],
   );
+
+  // Notifications émises hors composants (impression, import de fichiers…)
+  useEffect(() => {
+    const onNotify = (e: Event) => {
+      const d = (e as CustomEvent<{ type: NotifyType; message: string; description?: string }>).detail;
+      push(d.type, d.message, d.description);
+    };
+    window.addEventListener(APP_TOAST_EVENT, onNotify);
+    return () => window.removeEventListener(APP_TOAST_EVENT, onNotify);
+  }, [push]);
 
   return (
     <ToastContext.Provider value={{ toasts, push, dismiss }}>

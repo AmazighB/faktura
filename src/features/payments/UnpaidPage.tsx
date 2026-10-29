@@ -13,8 +13,9 @@ import { useAsync } from '@/hooks/useAsync';
 import { services } from '@/services';
 import { useToast } from '@/app/providers/ToastContext';
 import { formatCurrency, formatDate, daysUntil } from '@/utils/format';
-import type { Invoice } from '@/types';
+import type { EmailTemplateKey, Invoice } from '@/types';
 import { amountDue } from '@/utils/invoice';
+import { fillTemplate, mailtoLink } from '@/utils/email';
 
 type Filter = 'all' | 'upcoming' | 'overdue' | 'partial';
 
@@ -28,6 +29,40 @@ export default function UnpaidPage() {
   const { data: settings } = useAsync(() => services.settings.get(), []);
   const currency = settings?.currency ?? 'DA';
 
+  const handleRemind = async (invoice: Invoice) => {
+    const client = (clients ?? []).find((c) => c.id === invoice.clientId);
+    if (!settings || !client) return;
+    if (!client.email) {
+      push('warning', 'Aucun email pour ce client', 'Ajoutez-en un sur sa fiche pour envoyer une relance.');
+      return;
+    }
+    // Première relance : rappel courtois ; ensuite, si la facture est en retard : relance ferme
+    const key: EmailTemplateKey =
+      invoice.status === 'retard' && (invoice.reminders?.length ?? 0) > 0 && settings.emailTemplates.paymentOverdue.enabled
+        ? 'paymentOverdue'
+        : 'invoiceReminder';
+    const template = settings.emailTemplates[key];
+    if (!template.enabled) {
+      push('warning', 'Modèle d\'e-mail désactivé', 'Activez-le dans Paramètres > Email.');
+      return;
+    }
+    const vars = {
+      clientName: client.name,
+      companyName: settings.company.name,
+      number: invoice.number,
+      amount: formatCurrency(amountDue(invoice), currency),
+      dueDate: formatDate(invoice.dueDate),
+    };
+    window.location.href = mailtoLink(client.email, fillTemplate(template.subject, vars), fillTemplate(template.body, vars));
+    try {
+      await services.invoices.addReminder(invoice.id, { date: new Date().toISOString(), channel: 'email', templateKey: key });
+      push('success', 'Relance préparée', `Message ouvert dans votre messagerie (${client.email}). Elle est enregistrée dans l'historique.`);
+      reload();
+    } catch (e) {
+      push('error', e instanceof Error ? e.message : 'Erreur');
+    }
+  };
+
   const clientName = (id: string) => (clients ?? []).find((c) => c.id === id)?.name ?? '—';
 
   const unpaidInvoices = useMemo(() => {
@@ -39,7 +74,7 @@ export default function UnpaidPage() {
   const filtered = useMemo(() => {
     return unpaidInvoices.filter((i) => {
       const overdue = i.status === 'retard';
-      const partial = i.status === 'partielle';
+      const partial = i.paidAmount > 0 || (i.creditNotesApplied ?? 0) > 0;
       if (filter === 'overdue') return overdue;
       if (filter === 'upcoming') return !overdue;
       if (filter === 'partial') return partial;
@@ -78,6 +113,16 @@ export default function UnpaidPage() {
         return <span className="text-gray-400">dans {days}j</span>;
       },
     },
+    {
+      key: 'reminders',
+      header: 'Relances',
+      render: (i) => {
+        const n = i.reminders?.length ?? 0;
+        if (n === 0) return <span className="text-gray-400">—</span>;
+        const last = i.reminders![n - 1];
+        return <span className="num text-gray-600">{n} · {formatDate(last.date)}</span>;
+      },
+    },
     { key: 'status', header: 'Statut', render: (i) => <InvoiceStatusBadge status={i.status} /> },
     {
       key: 'actions',
@@ -97,7 +142,7 @@ export default function UnpaidPage() {
           </Tooltip>
           <Tooltip label="Relancer">
             <button
-              onClick={() => push('info', 'Relance envoyée', `Email de relance pour ${i.number}`)}
+              onClick={() => void handleRemind(i)}
               className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
               aria-label="Relancer"
             >
@@ -111,9 +156,9 @@ export default function UnpaidPage() {
 
   const filters: { key: Filter; label: string; count: number }[] = [
     { key: 'all', label: 'Toutes', count: unpaidInvoices.length },
-    { key: 'upcoming', label: 'À venir', count: unpaidInvoices.filter((i) => daysUntil(i.dueDate) >= 0).length },
-    { key: 'overdue', label: 'En retard', count: unpaidInvoices.filter((i) => daysUntil(i.dueDate) < 0).length },
-    { key: 'partial', label: 'Partiellement payées', count: unpaidInvoices.filter((i) => i.status === 'partielle').length },
+    { key: 'upcoming', label: 'À venir', count: unpaidInvoices.filter((i) => i.status !== 'retard').length },
+    { key: 'overdue', label: 'En retard', count: unpaidInvoices.filter((i) => i.status === 'retard').length },
+    { key: 'partial', label: 'Partiellement payées', count: unpaidInvoices.filter((i) => i.paidAmount > 0 || (i.creditNotesApplied ?? 0) > 0).length },
   ];
 
   return (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, ChevronDown } from 'lucide-react';
 import { PageContent } from '@/components/layout/PageHeader';
@@ -10,6 +10,7 @@ import { services } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { useToast } from '@/app/providers/ToastContext';
 import type { Client, ClientType } from '@/types';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 const empty: Omit<Client, 'id' | 'createdAt' | 'updatedAt' | 'lastActivityAt'> = {
   name: '', type: 'entreprise', nif: '', nis: '', rc: '', ai: '',
@@ -27,9 +28,14 @@ export default function ClientFormPage() {
   const groups = settings?.clientGroups ?? [];
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
+  const baseline = useRef(JSON.stringify(empty));
+  const { bypass } = useUnsavedChanges(JSON.stringify(form) !== baseline.current);
 
   useEffect(() => {
-    if (existing) setForm({ ...empty, ...existing });
+    if (existing) {
+      baseline.current = JSON.stringify({ ...empty, ...existing });
+      setForm({ ...empty, ...existing });
+    }
   }, [existing]);
 
   const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
@@ -42,6 +48,7 @@ export default function ClientFormPage() {
       return;
     }
     setSaving(true);
+    bypass.current = true;
     try {
       if (isEdit && id) {
         await services.clients.update(id, form);
@@ -55,6 +62,7 @@ export default function ClientFormPage() {
     } catch {
       push('error', 'Erreur lors de la sauvegarde');
     } finally {
+      bypass.current = false;
       setSaving(false);
     }
   };

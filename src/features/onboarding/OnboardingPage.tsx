@@ -150,7 +150,7 @@ export default function OnboardingPage() {
                     const groupLabels: Record<string, string> = { core: 'Principal', sales: 'Ventes', finance: 'Finances', system: 'Système' };
                     return (
                       <div key={group}>
-                        <p className="px-1 pb-1 pt-3 text-xs font-medium uppercase tracking-wider text-gray-400">{groupLabels[group]}</p>
+                        <p className="px-1 pb-1 pt-3 text-xs font-medium text-gray-400">{groupLabels[group]}</p>
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                           {groupModules.map((mod) => {
                             const enabled = moduleConfig[mod.key] ?? mod.defaultEnabled;

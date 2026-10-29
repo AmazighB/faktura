@@ -161,7 +161,7 @@ export function Header() {
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setQuickOpen(false)} />
                 <div className="absolute right-0 z-20 mt-1 w-72 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-800 dark:bg-gray-900">
-                  <p className="px-4 py-2 text-xs font-medium uppercase tracking-wider text-gray-400">Créer</p>
+                  <p className="px-4 py-2 text-xs font-medium text-gray-400">Créer</p>
                   {quickActions.filter((a) => moduleConfig[a.moduleKey] ?? a.moduleKey === '__always').map((action) => {
                     const Icon = action.icon;
                     return (

@@ -1,12 +1,14 @@
 import { useCallback, useMemo } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { printElement } from '@/utils/print';
 
 export function AppLayout() {
   const navigate = useNavigate();
   const go = useCallback((path: string) => navigate(path), [navigate]);
+  const { pathname } = useLocation();
 
   const shortcuts = useMemo(
     () => [
@@ -18,8 +20,41 @@ export function AppLayout() {
       { combo: 'g e', handler: () => go('/expenses') },
       { combo: 'g r', handler: () => go('/reports') },
       { combo: 'g s', handler: () => go('/settings') },
+      // Ctrl+N : nouveau document selon la section courante (jamais depuis un éditeur, pour ne pas perdre de saisie)
+      {
+        combo: 'ctrl+n',
+        handler: () => {
+          if (/\/(new|edit)(\/|$)/.test(pathname)) return;
+          if (pathname.startsWith('/quotes')) go('/quotes/new');
+          else if (pathname.startsWith('/clients')) go('/clients/new');
+          else if (pathname.startsWith('/payments') || pathname.startsWith('/unpaid')) go('/payments/new');
+          else go('/invoices/new');
+        },
+      },
+      // Ctrl+F : place le curseur dans la recherche de la page (sinon, recherche native du navigateur)
+      {
+        combo: 'ctrl+f',
+        preventDefault: false,
+        handler: (e: KeyboardEvent) => {
+          const input = document.querySelector<HTMLInputElement>('[data-global-search]');
+          if (!input) return;
+          e.preventDefault();
+          input.focus();
+          input.select();
+        },
+      },
+      // Ctrl+P : impression du document affiché (sinon, impression native)
+      {
+        combo: 'ctrl+p',
+        preventDefault: false,
+        handler: (e: KeyboardEvent) => {
+          if (!document.getElementById('document-preview')) return;
+          e.preventDefault();
+          printElement('document-preview', document.querySelector('h1')?.textContent ?? 'Document');
+        },
+      },
     ],
-    [go],
+    [go, pathname],
   );
   useKeyboardShortcuts(shortcuts);
 

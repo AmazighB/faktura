@@ -16,6 +16,7 @@ import { formatCurrency } from '@/utils/format';
 import type { CompanyInfo } from '@/types';
 
 import { printElement } from '@/utils/print';
+import { invoiceBalanceWithCredit } from '@/utils/invoice';
 
 export default function CreditNoteDetailPage() {
   const { id } = useParams();
@@ -25,6 +26,7 @@ export default function CreditNoteDetailPage() {
 
   const { data: creditNote, loading, error, reload } = useAsync(() => services.creditNotes.get(id!), [id]);
   const { data: client } = useAsync(async () => (creditNote ? services.clients.get(creditNote.clientId) : Promise.resolve(null)), [creditNote]);
+  const { data: invoice } = useAsync(async () => (creditNote ? services.invoices.get(creditNote.invoiceId) : null), [creditNote?.invoiceId]);
   const { data: settings } = useAsync(() => services.settings.get(), []);
 
   const totals = useMemo(() => (creditNote ? computeTotals(creditNote.items) : null), [creditNote]);
@@ -65,7 +67,7 @@ export default function CreditNoteDetailPage() {
               <h1 className="font-mono text-base font-semibold">{creditNote.number}</h1>
               <CreditNoteStatusBadge status={creditNote.status} />
             </div>
-            <p className="text-[13px] text-gray-500">{client?.name} · sur la facture <span className="font-mono">{creditNote.invoiceNumber}</span></p>
+            <p className="text-[13px] text-gray-500">{client?.name} · sur la facture <button onClick={() => navigate(`/invoices/${creditNote.invoiceId}`)} className="font-mono text-accent-600 hover:underline dark:text-accent-400">{creditNote.invoiceNumber}</button></p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -112,6 +114,13 @@ export default function CreditNoteDetailPage() {
             company={settings?.company ?? ({} as CompanyInfo)}
             currency={settings?.currency ?? 'DA'}
             template={settings?.invoiceTemplate}
+            reference={{
+              number: creditNote.invoiceNumber,
+              date: invoice?.date,
+              balance: invoice
+                ? { ...invoiceBalanceWithCredit(invoice, computeTotals(creditNote.items).totalTTC, creditNote.status === 'applique'), applied: creditNote.status === 'applique' }
+                : undefined,
+            }}
           />
         </div>
       </div>

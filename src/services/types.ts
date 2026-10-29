@@ -29,9 +29,11 @@ export interface QuoteService {
   update(id: string, data: Partial<Quote>): Promise<Quote>;
   remove(id: string): Promise<void>;
   convertToInvoice(id: string): Promise<Invoice>;
+  duplicate(id: string): Promise<Quote>;
 }
 
 export interface InvoiceService {
+  addReminder(id: string, reminder: Omit<import('@/types').Reminder, 'id'>): Promise<Invoice>;
   list(params?: ListParams): Promise<Invoice[]>;
   get(id: string): Promise<Invoice | null>;
   create(data: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Invoice>;

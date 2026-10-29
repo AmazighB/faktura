@@ -1,10 +1,12 @@
 import type { Expense } from '@/types';
 import type { ExpenseService, ListParams } from '@/services/types';
 import { mockExpenses } from '@/mocks/data';
-import { delay, uid, matchesSearch, clone } from '@/mocks/helpers';
+import { delay, uid, matchesSearch, persistentStore } from '@/mocks/helpers';
 
 class MockExpenseService implements ExpenseService {
-  private expenses: Expense[] = clone(mockExpenses);
+  private expensesStore = persistentStore<Expense>('expenses', mockExpenses);
+  private get expenses(): Expense[] { return this.expensesStore.items; }
+  private set expenses(v: Expense[]) { this.expensesStore.items = v; }
 
   async list(params?: ListParams): Promise<Expense[]> {
     let result = this.expenses;

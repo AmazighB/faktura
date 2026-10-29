@@ -1,14 +1,16 @@
 import type { Quote, Invoice } from '@/types';
 import type { QuoteService, ListParams } from '@/services/types';
 import { mockQuotes } from '@/mocks/data';
-import { delay, uid, matchesSearch, clone } from '@/mocks/helpers';
+import { delay, uid, matchesSearch, clone, persistentStore } from '@/mocks/helpers';
 import { invoiceService } from '@/mocks/invoiceService';
 import { settingsService } from '@/mocks/miscServices';
 import { nextDocumentNumber } from '@/utils/numbering';
 import { addDays, toISODate } from '@/utils/format';
 
 class MockQuoteService implements QuoteService {
-  private quotes: Quote[] = clone(mockQuotes);
+  private quotesStore = persistentStore<Quote>('quotes', mockQuotes);
+  private get quotes(): Quote[] { return this.quotesStore.items; }
+  private set quotes(v: Quote[]) { this.quotesStore.items = v; }
 
   async list(params?: ListParams): Promise<Quote[]> {
     let result = this.quotes;
@@ -43,8 +45,37 @@ class MockQuoteService implements QuoteService {
   }
 
   async remove(id: string): Promise<void> {
+    const target = this.quotes.find((x) => x.id === id);
+    if (target?.convertedInvoiceId && invoiceService._internalGet(target.convertedInvoiceId)) {
+      throw new Error('Ce devis a été converti en facture : il est conservé pour la traçabilité.');
+    }
     this.quotes = this.quotes.filter((q) => q.id !== id);
     return delay(undefined);
+  }
+
+  async duplicate(id: string): Promise<Quote> {
+    const original = this.quotes.find((x) => x.id === id);
+    if (!original) throw new Error('Devis introuvable');
+    const settings = await settingsService.get();
+    const today = new Date();
+    const now = today.toISOString();
+    const copy: Quote = {
+      ...clone(original),
+      id: uid('q'),
+      number: nextDocumentNumber(this.quotes.map((x) => x.number), settings.numbering, 'quote'),
+      date: toISODate(today),
+      expiryDate: toISODate(addDays(today, settings.defaultQuoteValidity ?? 30)),
+      status: 'brouillon',
+      convertedInvoiceId: undefined,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.quotes.unshift(copy);
+    return delay(copy);
+  }
+
+  _internalList(): Quote[] {
+    return [...this.quotes];
   }
 
   async convertToInvoice(id: string): Promise<Invoice> {

@@ -1,9 +1,10 @@
+import { notify } from '@/utils/notify';
 // Print utility: opens a print window with only the specified HTML content
 
 export function printDocument(title: string, bodyHTML: string, styles?: string) {
   const printWindow = window.open('', '_blank', 'width=800,height=600');
   if (!printWindow) {
-    alert('Veuillez autoriser les pop-ups pour imprimer');
+    notify('warning', 'Impression bloquée', 'Autorisez les fenêtres pop-up pour ce site, puis réessayez.');
     return;
   }
 
@@ -36,7 +37,7 @@ export function printDocument(title: string, bodyHTML: string, styles?: string) 
 export function printElement(elementId: string, title: string) {
   const el = document.getElementById(elementId);
   if (!el) {
-    alert('Contenu à imprimer introuvable');
+    notify('error', 'Impression impossible', 'Le contenu à imprimer est introuvable.');
     return;
   }
 
@@ -68,6 +69,7 @@ export function printElement(elementId: string, title: string) {
     #document-preview .mt-2 { margin-top: 8px; }
     #document-preview .mt-3 { margin-top: 12px; }
     #document-preview .mt-4 { margin-top: 16px; }
+    #document-preview .mt-1\\.5 { margin-top: 6px; }
     #document-preview .mt-6 { margin-top: 24px; }
     #document-preview .mt-8 { margin-top: 32px; }
     #document-preview .pb-2 { padding-bottom: 8px; }
@@ -83,7 +85,7 @@ export function printElement(elementId: string, title: string) {
     #document-preview .w-72 { width: 288px; }
     #document-preview .w-full { width: 100%; }
     #document-preview .max-w-\\[800px\\] { max-width: 800px; }
-    #document-preview .bg-accent-600 { background: #4f46e5; }
+    #document-preview .bg-accent-600 { background: #3b4fd6; }
     #document-preview .text-white { color: white; }
     #document-preview .rounded-lg { border-radius: 8px; }
     #document-preview .h-10 { height: 40px; }

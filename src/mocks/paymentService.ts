@@ -1,14 +1,16 @@
 import type { Payment } from '@/types';
 import type { PaymentService, ListParams } from '@/services/types';
 import { mockPayments } from '@/mocks/data';
-import { delay, uid, matchesSearch, clone } from '@/mocks/helpers';
+import { delay, uid, matchesSearch, persistentStore } from '@/mocks/helpers';
 import { invoiceService } from '@/mocks/invoiceService';
 import { round2 } from '@/utils/calc';
 import { amountDue } from '@/utils/invoice';
 import { nextSequentialNumber } from '@/utils/numbering';
 
 class MockPaymentService implements PaymentService {
-  private payments: Payment[] = clone(mockPayments);
+  private paymentsStore = persistentStore<Payment>('payments', mockPayments);
+  private get payments(): Payment[] { return this.paymentsStore.items; }
+  private set payments(v: Payment[]) { this.paymentsStore.items = v; }
 
   private nextNumber(): string {
     return nextSequentialNumber(this.payments.map((p) => p.number), `PAY-${new Date().getFullYear()}-`, 4);

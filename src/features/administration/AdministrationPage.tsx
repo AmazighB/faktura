@@ -20,6 +20,8 @@ import { userRoleLabels } from '@/utils/labels';
 import { PERMISSION_MODULES, PERMISSION_ACTIONS, getRoleDefaultPermissions } from '@/utils/permissions';
 import { cn } from '@/utils/cn';
 import type { User, UserRole, ActivityLog, Permissions, PermissionModule, PermissionAction } from '@/types';
+import { formatDate } from '@/utils/format';
+import { resetPersistedData } from '@/mocks/helpers';
 
 const sections = [
   { key: 'users', label: 'Utilisateurs', icon: Users },
@@ -158,19 +160,40 @@ export default function AdministrationPage() {
                     </div>
                   ))}
                 </div>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 p-4 dark:border-gray-800">
+                  <div>
+                    <p className="text-sm font-medium">Données de démonstration</p>
+                    <p className="text-xs text-gray-500">Vos données sont conservées dans ce navigateur. Réinitialiser les remplace par les données de départ.</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: 'Réinitialiser les données',
+                        message: 'Toutes les données saisies (clients, factures, paiements, réglages…) seront remplacées par les données de départ. Cette action est irréversible.',
+                        confirmLabel: 'Réinitialiser',
+                        variant: 'danger',
+                      });
+                      if (ok) resetPersistedData();
+                    }}
+                  >
+                    Réinitialiser
+                  </Button>
+                </div>
               </Card>
             )}
 
             {section === 'backups' && (
               <Card>
                 <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-800">
-                  <div><p className="text-sm font-medium">Sauvegardes</p><p className="text-xs text-gray-400">Dernière: {backups && backups[0] ? new Date(backups[0].date).toLocaleString('fr-FR') : '—'}</p></div>
+                  <div><p className="text-sm font-medium">Sauvegardes</p><p className="text-xs text-gray-400">Dernière: {backups && backups[0] ? formatDate(new Date(backups[0].date), { dateStyle: 'short', timeStyle: 'short' }) : '—'}</p></div>
                   <Button size="sm" onClick={handleBackup}>Sauvegarder</Button>
                 </div>
                 <div className="divide-y divide-gray-100 dark:divide-gray-800/50">
                   {(backups ?? []).map((b) => (
                     <div key={b.id} className="flex items-center justify-between px-4 py-2.5">
-                      <div className="flex items-center gap-3"><Database className="h-4 w-4 text-gray-400" /><div><p className="text-sm font-medium">{new Date(b.date).toLocaleString('fr-FR')}</p><p className="text-xs text-gray-400">{b.size} · {b.location}</p></div></div>
+                      <div className="flex items-center gap-3"><Database className="h-4 w-4 text-gray-400" /><div><p className="text-sm font-medium">{formatDate(new Date(b.date), { dateStyle: 'short', timeStyle: 'short' })}</p><p className="text-xs text-gray-400">{b.size} · {b.location}</p></div></div>
                       <div className="flex items-center gap-2">
                         <Badge className={b.type === 'manuel' ? 'bg-accent-100 text-accent-700 dark:bg-accent-900/30 dark:text-accent-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-800'}>{b.type}</Badge>
                         <Button variant="outline" size="sm" onClick={() => handleRestore(b.id)}>Restaurer</Button>
@@ -206,9 +229,9 @@ export default function AdministrationPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead><tr className="border-b border-gray-200 dark:border-gray-800">
-                      <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-gray-400">Module</th>
-                      {PERMISSION_ACTIONS.map((a) => <th key={a.key} className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wide text-gray-400">{a.label}</th>)}
-                      <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wide text-gray-400">Tout</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-400">Module</th>
+                      {PERMISSION_ACTIONS.map((a) => <th key={a.key} className="px-3 py-2 text-center text-xs font-medium text-gray-400">{a.label}</th>)}
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-400">Tout</th>
                     </tr></thead>
                     <tbody>
                       {PERMISSION_MODULES.map((mod) => {

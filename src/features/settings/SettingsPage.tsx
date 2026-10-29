@@ -12,6 +12,7 @@ import { useApp } from '@/app/providers/AppContext';
 import { cn } from '@/utils/cn';
 import { ALL_MODULES, loadModuleConfig, saveModuleConfig, type ModuleConfig } from '@/utils/modules';
 import type { Settings, PaymentMethod, SmtpConfig, ExpenseCategoryConfig, EmailTemplateKey, EmailTemplate } from '@/types';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 const sections = [
   { key: 'company', label: 'Entreprise', icon: Building2 },
@@ -42,6 +43,8 @@ export default function SettingsPage() {
   const [checkingUpdate, setCheckingUpdate] = useState(false);
 
   useEffect(() => { if (settings) setForm({ ...settings }); }, [settings]);
+
+  useUnsavedChanges(!!form && !!settings && JSON.stringify(form) !== JSON.stringify(settings));
 
   // Ctrl+S enregistre (le raccourci pointe toujours vers la dernière version de handleSave)
   const saveRef = useRef<() => void>(() => {});
@@ -448,7 +451,7 @@ export default function SettingsPage() {
                   const groupLabels: Record<string, string> = { core: 'Principal', sales: 'Ventes', finance: 'Finances', system: 'Système' };
                   return (
                     <div key={group} className="space-y-1.5">
-                      <p className="px-1 text-xs font-medium uppercase tracking-wider text-gray-400">{groupLabels[group]}</p>
+                      <p className="px-1 text-xs font-medium text-gray-400">{groupLabels[group]}</p>
                       {groupModules.map((mod) => {
                         const enabled = moduleConfig[mod.key] ?? mod.defaultEnabled;
                         const Icon = mod.icon;

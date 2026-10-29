@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { computeTotals, lineHT } from '@/utils/calc';
+import { computeTotals, lineHT, lineVAT, round2 } from '@/utils/calc';
+import { amountInWords } from '@/utils/numberToWords';
 import type { Client, DocumentItem, CompanyInfo } from '@/types';
 
 interface DocumentPreviewProps {
@@ -17,6 +18,13 @@ interface DocumentPreviewProps {
   template?: 'moderne' | 'classique' | 'minimal';
   paidAmount?: number;
   creditNotesApplied?: number;
+  /** Document d'origine (avoir : facture de référence, obligatoire sur un avoir) */
+  reference?: {
+    number: string;
+    date?: string;
+    /** Situation de la facture après l'avoir */
+    balance?: { total: number; due: number; customerCredit: number; applied: boolean };
+  };
   children?: ReactNode;
 }
 
@@ -45,6 +53,19 @@ const templateStyles = {
   },
 } as const;
 
+const recipientLabels = {
+  facture: 'Facturé à',
+  devis: 'Devis établi pour',
+  avoir: 'Avoir établi pour',
+  recu: 'Reçu de',
+};
+
+const wordsIntro = {
+  facture: 'Arrêtée la présente facture à la somme de',
+  devis: 'Arrêté le présent devis à la somme de',
+  avoir: 'Arrêté le présent avoir à la somme de',
+} as const;
+
 const typeLabels = {
   facture: 'FACTURE',
   devis: 'DEVIS',
@@ -66,10 +87,16 @@ export function DocumentPreview({
   template = 'moderne',
   paidAmount = 0,
   creditNotesApplied = 0,
+  reference,
 }: DocumentPreviewProps) {
   const totals = computeTotals(items);
   const remaining = Math.max(totals.totalTTC - paidAmount - creditNotesApplied, 0);
   const tpl = templateStyles[template] ?? templateStyles.moderne;
+  // Ventilation de la TVA par taux (affichée dès qu'il y a plusieurs taux)
+  const vatByRate = [...new Set(items.map((i) => i.vatRate))].sort((a, b) => a - b).map((rate) => {
+    const lines = items.filter((i) => i.vatRate === rate);
+    return { rate, base: round2(lines.reduce((s, i) => s + lineHT(i), 0)), vat: round2(lines.reduce((s, i) => s + lineVAT(i), 0)) };
+  });
 
   return (
     <div className={`mx-auto max-w-[800px] bg-white p-8 text-black shadow-sm ${tpl.root}`} id="document-preview" data-template={template}>
@@ -93,7 +120,9 @@ export function DocumentPreview({
             <p>Tél: {company.phone}</p>
             <p>Email: {company.email}</p>
             {company.nif && <p>NIF: {company.nif}</p>}
+            {company.nis && <p>NIS: {company.nis}</p>}
             {company.rc && <p>RC: {company.rc}</p>}
+            {company.ai && <p>AI: {company.ai}</p>}
           </div>
         </div>
         <div className="text-right">
@@ -101,7 +130,12 @@ export function DocumentPreview({
           <p className="mt-1 text-sm font-medium text-gray-700">{number}</p>
           <div className="mt-3 text-xs text-gray-500">
             <p>Date: {formatDate(date)}</p>
-            <p>{type === 'devis' ? "Valable jusqu'au" : 'Échéance'}: {formatDate(dueDateOrExpiry)}</p>
+            {type !== 'avoir' && <p>{type === 'devis' ? "Valable jusqu'au" : 'Échéance'}: {formatDate(dueDateOrExpiry)}</p>}
+            {reference && (
+              <p className="mt-1.5 font-medium text-gray-700">
+                Facture de référence : {reference.number}{reference.date ? ` du ${formatDate(reference.date)}` : ''}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -109,7 +143,7 @@ export function DocumentPreview({
       {/* Client */}
       <div className="mt-6 flex justify-between">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Facturé à</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{recipientLabels[type]}</p>
           <div className="mt-1.5 text-sm">
             <p className="font-semibold text-gray-900">{client?.name ?? '—'}</p>
             <p className="text-gray-600">{client?.address}</p>
@@ -117,6 +151,9 @@ export function DocumentPreview({
             {client?.phone && <p className="text-gray-600">Tél: {client.phone}</p>}
             {client?.email && <p className="text-gray-600">{client.email}</p>}
             {client?.nif && <p className="text-gray-600">NIF: {client.nif}</p>}
+            {client?.nis && <p className="text-gray-600">NIS: {client.nis}</p>}
+            {client?.rc && <p className="text-gray-600">RC: {client.rc}</p>}
+            {client?.ai && <p className="text-gray-600">AI: {client.ai}</p>}
           </div>
         </div>
       </div>
@@ -165,10 +202,19 @@ export function DocumentPreview({
             <span>Total HT</span>
             <span className="num-amount">{formatCurrency(totals.netHT, currency)}</span>
           </div>
-          <div className="flex justify-between text-gray-600">
-            <span>TVA</span>
-            <span className="num-amount">{formatCurrency(totals.vatAmount, currency)}</span>
-          </div>
+          {vatByRate.length > 1 ? (
+            vatByRate.map((v) => (
+              <div key={v.rate} className="flex justify-between text-gray-600">
+                <span>TVA {v.rate}% <span className="text-xs text-gray-400">(base {formatCurrency(v.base, currency)})</span></span>
+                <span className="num-amount">{formatCurrency(v.vat, currency)}</span>
+              </div>
+            ))
+          ) : (
+            <div className="flex justify-between text-gray-600">
+              <span>TVA{vatByRate[0] ? ` ${vatByRate[0].rate}%` : ''}</span>
+              <span className="num-amount">{formatCurrency(totals.vatAmount, currency)}</span>
+            </div>
+          )}
           <div className={`flex justify-between ${tpl.total} pt-2 text-base font-bold text-gray-900`}>
             <span>Total TTC</span>
             <span className="num-amount">{formatCurrency(totals.totalTTC, currency)}</span>
@@ -195,6 +241,35 @@ export function DocumentPreview({
           )}
         </div>
       </div>
+
+      {/* Avoir : situation de la facture de référence */}
+      {type === 'avoir' && reference?.balance && (
+        <div className="mt-4 flex justify-end">
+          <div className="w-72 space-y-1.5 text-sm">
+            <div className="flex justify-between text-gray-600">
+              <span>Total de la facture</span>
+              <span className="num-amount">{formatCurrency(reference.balance.total, currency)}</span>
+            </div>
+            <div className="flex justify-between font-semibold text-gray-900">
+              <span>{reference.balance.applied ? 'Reste à payer' : 'Reste à payer après cet avoir'}</span>
+              <span className="num-amount">{formatCurrency(reference.balance.due, currency)}</span>
+            </div>
+            {reference.balance.customerCredit > 0 && (
+              <div className="flex justify-between text-gray-600">
+                <span>Crédit en faveur du client</span>
+                <span className="num-amount">{formatCurrency(reference.balance.customerCredit, currency)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Montant en lettres */}
+      {type !== 'recu' && (
+        <p className="mt-4 text-xs text-gray-600">
+          {wordsIntro[type]} : <span className="font-medium">{amountInWords(totals.totalTTC, currency)}</span>.
+        </p>
+      )}
 
       {/* Notes & conditions */}
       {(notes || conditions || company.bankDetails) && (

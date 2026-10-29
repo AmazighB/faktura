@@ -94,6 +94,7 @@ export default function ReportsPage() {
   const { data: invoices, loading: invLoading } = useAsync(() => services.invoices.list(), []);
   const { data: expenses, loading: expLoading } = useAsync(() => services.expenses.list(), []);
   const { data: payments } = useAsync(() => services.payments.list(), []);
+  const { data: creditNotes } = useAsync(() => services.creditNotes.list(), []);
   const { data: clients } = useAsync(() => services.clients.list(), []);
   const { data: settings } = useAsync(() => services.settings.get(), []);
   const currency = settings?.currency ?? 'DA';
@@ -123,7 +124,13 @@ export default function ReportsPage() {
 
   const kpis = useMemo(() => {
     // Chiffre d'affaires et charges hors taxes ; « encaissé » = paiements reçus dans la période.
-    const totalBilled = filteredInvoices.reduce((s, i) => s + computeTotals(i.items).netHT, 0);
+    // Avoirs appliqués dans la période : ils réduisent le chiffre d'affaires et la TVA collectée
+    const credits = (creditNotes ?? []).filter((cn) => cn.status === 'applique' && inRange(cn.date, range));
+    const creditHT = credits.reduce((s, cn) => s + computeTotals(cn.items).netHT, 0);
+    const creditVat = credits.reduce((s, cn) => s + computeTotals(cn.items).vatAmount, 0);
+    const totalBilled = filteredInvoices.reduce((s, i) => s + computeTotals(i.items).netHT, 0) - creditHT;
+    const vatCollected = filteredInvoices.reduce((s, i) => s + computeTotals(i.items).vatAmount, 0) - creditVat;
+    const vatDeductible = filteredExpenses.reduce((s, e) => s + (e.amountTTC - e.amountHT), 0);
     const totalPaid = (payments ?? []).filter((p) => inRange(p.date, range)).reduce((s, p) => s + p.amount, 0);
     const totalRemaining = filteredInvoices.reduce((s, i) => s + amountDue(i), 0);
     const totalOverdue = filteredInvoices
@@ -132,8 +139,8 @@ export default function ReportsPage() {
     const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amountHT, 0);
     const result = totalBilled - totalExpenses;
     const margin = totalBilled > 0 ? (result / totalBilled) * 100 : 0;
-    return { totalBilled, totalPaid, totalRemaining, totalOverdue, totalExpenses, result, margin };
-  }, [filteredInvoices, filteredExpenses, payments, range]);
+    return { totalBilled, totalPaid, totalRemaining, totalOverdue, totalExpenses, result, margin, vatCollected, vatDeductible, vatDue: vatCollected - vatDeductible };
+  }, [filteredInvoices, filteredExpenses, payments, creditNotes, range]);
 
   const previousRange = useMemo(() => {
     const from = new Date(range.from);
@@ -147,11 +154,12 @@ export default function ReportsPage() {
   const previousKpis = useMemo(() => {
     const prevInv = (invoices ?? []).filter((i) => i.status !== 'brouillon' && i.status !== 'annulee' && inRange(i.date, previousRange));
     const prevExp = (expenses ?? []).filter((e) => inRange(e.date, previousRange));
-    const billed = prevInv.reduce((s, i) => s + computeTotals(i.items).netHT, 0);
+    const prevCredit = (creditNotes ?? []).filter((cn) => cn.status === 'applique' && inRange(cn.date, previousRange)).reduce((s, cn) => s + computeTotals(cn.items).netHT, 0);
+    const billed = prevInv.reduce((s, i) => s + computeTotals(i.items).netHT, 0) - prevCredit;
     const paid = (payments ?? []).filter((p) => inRange(p.date, previousRange)).reduce((s, p) => s + p.amount, 0);
     const exp = prevExp.reduce((s, e) => s + e.amountHT, 0);
     return { billed, paid, exp, result: billed - exp };
-  }, [invoices, expenses, payments, previousRange]);
+  }, [invoices, expenses, payments, creditNotes, previousRange]);
 
   const trends = {
     billed: pctChange(kpis.totalBilled, previousKpis.billed),
@@ -165,7 +173,7 @@ export default function ReportsPage() {
     const now = new Date();
     for (let i = 11; i >= 0; i--) {
       const m = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const label = m.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+      const label = formatDate(m, { month: 'short', year: '2-digit' });
       const monthInv = (invoices ?? []).filter((inv) => {
         const d = new Date(inv.date);
         return d.getFullYear() === m.getFullYear() && d.getMonth() === m.getMonth();
@@ -564,7 +572,7 @@ function OverviewTab({
   currency: string;
   invoicesByStatus: [string, { count: number; total: number }][];
   clientsWithUnpaid: { client: Client | undefined; total: number }[];
-  kpis: { totalPaid: number; totalExpenses: number; result: number };
+  kpis: { totalPaid: number; totalExpenses: number; result: number; vatCollected: number; vatDeductible: number; vatDue: number };
   range: DateRange;
 }) {
   return (
@@ -693,6 +701,14 @@ function OverviewTab({
             value={formatCurrency(kpis.result, currency)}
             highlight={kpis.result >= 0 ? 'positive' : 'negative'}
           />
+        </div>
+        <div className="mt-4 border-t border-gray-200 pt-3 dark:border-gray-800">
+          <h4 className="text-[13px] font-medium text-gray-700 dark:text-gray-300">TVA de la période</h4>
+          <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <SummaryRow label="TVA collectée (nette des avoirs)" value={formatCurrency(kpis.vatCollected, currency)} />
+            <SummaryRow label="TVA déductible (dépenses)" value={formatCurrency(kpis.vatDeductible, currency)} />
+            <SummaryRow label={kpis.vatDue >= 0 ? 'TVA à reverser' : 'Crédit de TVA'} value={formatCurrency(Math.abs(kpis.vatDue), currency)} />
+          </div>
         </div>
       </Card>
     </div>

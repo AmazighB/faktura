@@ -34,6 +34,10 @@ export function lineHT(item: LineItem): number {
   return lineParts(item).ht;
 }
 
+export function lineVAT(item: LineItem): number {
+  return lineParts(item).vat;
+}
+
 export function lineTTC(item: LineItem): number {
   return lineParts(item).ttc;
 }

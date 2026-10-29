@@ -107,7 +107,7 @@ export default function DashboardPage() {
       const m = new Date(new Date().getFullYear(), new Date().getMonth() - (5 - k), 1);
       const nx = new Date(m.getFullYear(), m.getMonth() + 1, 1);
       return {
-        label: m.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', ''),
+        label: formatDate(m, { month: 'short' }).replace('.', ''),
         billed: sum(real.filter((i) => within(i.date, m, nx)), (i) => computeTotals(i.items).totalTTC),
         collected: sum((payments ?? []).filter((p) => within(p.date, m, nx)), (p) => p.amount),
       };

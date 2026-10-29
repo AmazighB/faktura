@@ -11,6 +11,7 @@ import { computeTotals, lineHT } from '@/utils/calc';
 import { formatCurrency, toISODate, addDays } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import type { DocumentItem, Product, CompanyInfo } from '@/types';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 interface DocumentEditorProps {
   type: 'facture' | 'devis';
@@ -64,6 +65,15 @@ export function DocumentEditor({ type, documentId, onSave, initialNumber, initia
   const { data: products } = useAsync(() => services.products.list(), []);
   const { data: settings } = useAsync(() => services.settings.get(), []);
 
+  // Modifications non enregistrées : comparaison avec l'état chargé (édition) ou l'état vide (création)
+  const loadedSnap = useRef<string | null>(null);
+  const meaningful = (list: DocumentItem[]) => list.filter((i) => i.designation.trim() || i.unitPrice > 0);
+  const currentSnap = JSON.stringify({ clientId, date, dueDate, items: meaningful(items), notes, conditions });
+  const dirty = documentId
+    ? loadedSnap.current !== null && currentSnap !== loadedSnap.current
+    : clientId !== (initialClientId ?? '') || meaningful(items).length > 0 || notes.trim() !== '' || conditions.trim() !== '';
+  const { bypass } = useUnsavedChanges(dirty);
+
   // Load existing document
   useEffect(() => {
     if (!documentId) return;
@@ -79,6 +89,7 @@ export function DocumentEditor({ type, documentId, onSave, initialNumber, initia
         setItems(doc.items);
         setNotes(doc.notes ?? '');
         setConditions(doc.conditions ?? '');
+        loadedSnap.current = JSON.stringify({ clientId: doc.clientId, date: doc.date.split('T')[0], dueDate: due.split('T')[0], items: meaningful(doc.items), notes: doc.notes ?? '', conditions: doc.conditions ?? '' });
       }
     };
     load();
@@ -102,6 +113,7 @@ export function DocumentEditor({ type, documentId, onSave, initialNumber, initia
   const totals = useMemo(() => computeTotals(items), [items]);
 
   const filteredClients = (clients ?? [])
+    .filter((c) => !c.archived)
     .filter((c) => c.name.toLowerCase().includes(clientSearch.toLowerCase()) || c.phone.includes(clientSearch))
     .slice(0, 6);
 
@@ -182,6 +194,7 @@ export function DocumentEditor({ type, documentId, onSave, initialNumber, initia
       return;
     }
     setSaving(true);
+    bypass.current = true; // la page redirige après l'enregistrement : pas de confirmation
     try {
       await onSave({
         clientId, date, dueDateOrExpiry: dueDate,
@@ -191,6 +204,7 @@ export function DocumentEditor({ type, documentId, onSave, initialNumber, initia
     } catch {
       push('error', 'Erreur lors de la sauvegarde');
     } finally {
+      bypass.current = false;
       setSaving(false);
     }
   };

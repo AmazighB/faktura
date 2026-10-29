@@ -12,6 +12,7 @@ import { computeTotals, lineHT } from '@/utils/calc';
 import { cn } from '@/utils/cn';
 import { formatCurrency, toISODate } from '@/utils/format';
 import type { CompanyInfo, DocumentItem } from '@/types';
+import { invoiceBalanceWithCredit } from '@/utils/invoice';
 
 export default function CreditNoteEditorPage() {
   const { id } = useParams();
@@ -281,7 +282,7 @@ export default function CreditNoteEditorPage() {
       <div className="flex-1 overflow-y-auto scrollbar-thin bg-gray-100 p-4 dark:bg-gray-950 lg:p-6">
         <DocumentPreview
           type="avoir"
-          number={isEdit && existingCn ? existingCn.number : 'AV-2026-—'}
+          number={isEdit && existingCn ? existingCn.number : `AV-${new Date().getFullYear()}-…`}
           date={date}
           dueDateOrExpiry={date}
           client={selectedClient}
@@ -291,6 +292,12 @@ export default function CreditNoteEditorPage() {
           company={company}
           currency={currency}
           template={settings?.invoiceTemplate}
+          reference={(() => {
+            const ref = (invoices ?? []).find((i) => i.id === invoiceId);
+            if (!ref) return undefined;
+            const applied = existingCn?.status === 'applique';
+            return { number: ref.number, date: ref.date, balance: { ...invoiceBalanceWithCredit(ref, computeTotals(items).totalTTC, applied), applied } };
+          })()}
         />
       </div>
     </div>
