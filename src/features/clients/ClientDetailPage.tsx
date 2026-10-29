@@ -18,6 +18,7 @@ import { computeTotals } from '@/utils/calc';
 import { clientTypeLabels, paymentMethodLabels } from '@/utils/labels';
 import type { Invoice, Payment, Quote } from '@/types';
 import { amountDue } from '@/utils/invoice';
+import { isActivePayment } from '@/utils/payment';
 
 export default function ClientDetailPage() {
   const { id } = useParams();
@@ -58,9 +59,14 @@ export default function ClientDetailPage() {
   ];
 
   const paymentColumns: Column<Payment>[] = [
-    { key: 'number', header: 'Numéro', render: (p) => <span className="font-medium">{p.number}</span> },
+    { key: 'number', header: 'Numéro', render: (p) => (
+      <div>
+        <span className={'font-medium ' + (isActivePayment(p) ? '' : 'text-gray-400 line-through')}>{p.number}</span>
+        {!isActivePayment(p) && <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">Annulé{p.cancelReason ? ` · ${p.cancelReason}` : ''}</p>}
+      </div>
+    ) },
     { key: 'date', header: 'Date', render: (p) => formatDate(p.date) },
-    { key: 'amount', header: 'Montant', align: 'right', render: (p) => <span className="font-medium">{formatCurrency(p.amount)}</span> },
+    { key: 'amount', header: 'Montant', align: 'right', render: (p) => <span className={'font-medium ' + (isActivePayment(p) ? '' : 'text-gray-400 line-through')}>{formatCurrency(p.amount)}</span> },
     { key: 'method', header: 'Mode', render: (p) => <span className="text-gray-600">{paymentMethodLabels[p.method]}</span> },
   ];
 

@@ -149,6 +149,10 @@ export interface Payment {
   method: PaymentMethod;
   reference?: string;
   note?: string;
+  /** Absent = paiement valide (données antérieures à l'annulation avec motif) */
+  status?: 'valide' | 'annule';
+  cancelledAt?: string;
+  cancelReason?: string;
   createdAt: string;
 }
 

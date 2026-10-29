@@ -6,6 +6,7 @@ import { invoiceService } from '@/mocks/invoiceService';
 import { round2 } from '@/utils/calc';
 import { amountDue } from '@/utils/invoice';
 import { nextSequentialNumber } from '@/utils/numbering';
+import { MIN_CANCEL_REASON_LENGTH, isActivePayment } from '@/utils/payment';
 
 class MockPaymentService implements PaymentService {
   private paymentsStore = persistentStore<Payment>('payments', mockPayments);
@@ -53,14 +54,19 @@ class MockPaymentService implements PaymentService {
     return delay(payment);
   }
 
-  async remove(id: string): Promise<void> {
-    const payment = this.payments.find((p) => p.id === id);
-    this.payments = this.payments.filter((p) => p.id !== id);
-    if (payment) {
-      const invoice = invoiceService._internalGet(payment.invoiceId);
-      if (invoice) invoiceService._internalUpdate(invoice.id, { paidAmount: round2(Math.max(0, invoice.paidAmount - payment.amount)) });
-    }
-    return delay(undefined);
+  async cancel(id: string, reason: string): Promise<Payment> {
+    const idx = this.payments.findIndex((x) => x.id === id);
+    if (idx === -1) throw new Error('Paiement introuvable');
+    const payment = this.payments[idx];
+    if (!isActivePayment(payment)) throw new Error('Ce paiement est déjà annulé.');
+    const motif = reason.trim();
+    if (motif.length < MIN_CANCEL_REASON_LENGTH) throw new Error('Indiquez le motif de l\'annulation.');
+
+    const cancelled: Payment = { ...payment, status: 'annule', cancelledAt: new Date().toISOString(), cancelReason: motif };
+    this.payments[idx] = cancelled;
+    const invoice = invoiceService._internalGet(payment.invoiceId);
+    if (invoice) invoiceService._internalUpdate(invoice.id, { paidAmount: round2(Math.max(0, invoice.paidAmount - payment.amount)) });
+    return delay(cancelled);
   }
 }
 

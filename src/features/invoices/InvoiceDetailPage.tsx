@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  ArrowLeft, Edit3, Printer, Copy, CreditCard, FileX, MoreHorizontal, Ban,
-} from 'lucide-react';
+import { ArrowLeft, Edit3, Printer, Copy, CreditCard, FileX, MoreHorizontal, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { DocumentPreview } from '@/components/ui/DocumentPreview';
@@ -19,10 +17,12 @@ import { useConfirm } from '@/app/providers/ConfirmContext';
 import { computeTotals } from '@/utils/calc';
 import { formatCurrency, formatDate, toISODate } from '@/utils/format';
 import { paymentMethodLabels } from '@/utils/labels';
-import type { PaymentMethod } from '@/types';
+import type { Payment, PaymentMethod } from '@/types';
 
 import { printElement } from '@/utils/print';
 import { amountDue } from '@/utils/invoice';
+import { CancelPaymentDialog } from '@/components/ui/CancelPaymentDialog';
+import { isActivePayment } from '@/utils/payment';
 
 export default function InvoiceDetailPage() {
   const { id } = useParams();
@@ -36,6 +36,7 @@ export default function InvoiceDetailPage() {
   const [paymentNote, setPaymentNote] = useState('');
   const [savingPayment, setSavingPayment] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [paymentToCancel, setPaymentToCancel] = useState<Payment | null>(null);
 
   const { data: invoice, loading, error, reload } = useAsync(() => services.invoices.get(id!), [id]);
   const { data: client } = useAsync(async () => (invoice ? services.clients.get(invoice.clientId) : Promise.resolve(null)), [invoice]);
@@ -133,6 +134,17 @@ export default function InvoiceDetailPage() {
   const paidPct = total > 0 ? Math.min(((invoice.paidAmount + (invoice.creditNotesApplied ?? 0)) / total) * 100, 100) : 0;
   const isDraft = invoice.status === 'brouillon';
   const canCancel = invoice.status !== 'brouillon' && invoice.status !== 'annulee';
+  const handleCancelPayment = async (payment: Payment, reason: string) => {
+    try {
+      await services.payments.cancel(payment.id, reason);
+      push('success', 'Paiement annulé', payment.number);
+      setPaymentToCancel(null);
+      reload();
+      reloadPayments();
+    } catch (e) {
+      push('error', e instanceof Error ? e.message : 'Annulation impossible');
+    }
+  };
   const openPayment = () => { setPaymentAmount(String(remaining)); setPaymentOpen(true); };
 
   return (
@@ -232,12 +244,22 @@ export default function InvoiceDetailPage() {
               </div>
               <div className="divide-y divide-gray-100 dark:divide-gray-800/50">
                 {payments?.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between px-5 py-3">
-                    <div>
-                      <p className="num text-sm font-medium">{formatCurrency(p.amount, settings?.currency ?? 'DA')}</p>
-                      <p className="text-xs text-gray-400">{formatDate(p.date)} · {paymentMethodLabels[p.method]}{p.reference ? ` · ${p.reference}` : ''}</p>
+                  <div key={p.id} className="group flex items-center justify-between gap-3 px-5 py-3">
+                    <div className="min-w-0">
+                      <p className={'num text-sm font-medium ' + (isActivePayment(p) ? '' : 'text-gray-400 line-through')}>{formatCurrency(p.amount, settings?.currency ?? 'DA')}</p>
+                      <p className="text-xs text-gray-500">{formatDate(p.date)} · {paymentMethodLabels[p.method]}{p.reference ? ` · ${p.reference}` : ''}</p>
+                      {!isActivePayment(p) && (
+                        <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">Annulé{p.cancelledAt ? ` le ${formatDate(p.cancelledAt)}` : ''}{p.cancelReason ? ` · ${p.cancelReason}` : ''}</p>
+                      )}
                     </div>
-                    <span className="font-mono text-xs text-gray-400">{p.number}</span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="font-mono text-xs text-gray-400">{p.number}</span>
+                      {isActivePayment(p) && (
+                        <button onClick={() => setPaymentToCancel(p)} aria-label="Annuler le paiement" className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100 dark:hover:bg-red-900/20">
+                          <Ban className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -245,6 +267,8 @@ export default function InvoiceDetailPage() {
           )}
         </div>
       </div>
+
+      <CancelPaymentDialog payment={paymentToCancel} currency={settings?.currency ?? 'DA'} onClose={() => setPaymentToCancel(null)} onConfirm={handleCancelPayment} />
 
       {/* Payment dialog */}
       <Dialog open={paymentOpen} onClose={() => setPaymentOpen(false)} title="Enregistrer un paiement" size="sm" footer={<><Button variant="outline" onClick={() => setPaymentOpen(false)}>Annuler</Button>

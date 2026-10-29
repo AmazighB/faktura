@@ -13,6 +13,7 @@ import { computeTotals } from '@/utils/calc';
 import { formatCurrency, formatDate, formatRelative, daysUntil } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import { amountDue } from '@/utils/invoice';
+import { activePayments } from '@/utils/payment';
 
 type Period = 'today' | 'week' | 'month' | 'quarter' | 'year';
 
@@ -81,8 +82,8 @@ export default function DashboardPage() {
 
     const billed = sum(real.filter((i) => within(i.date, start, end)), (i) => computeTotals(i.items).totalTTC);
     const billedPrev = sum(real.filter((i) => within(i.date, prev.start, prev.end)), (i) => computeTotals(i.items).totalTTC);
-    const collected = sum((payments ?? []).filter((p) => within(p.date, start, end)), (p) => p.amount);
-    const collectedPrev = sum((payments ?? []).filter((p) => within(p.date, prev.start, prev.end)), (p) => p.amount);
+    const collected = sum(activePayments(payments ?? []).filter((p) => within(p.date, start, end)), (p) => p.amount);
+    const collectedPrev = sum(activePayments(payments ?? []).filter((p) => within(p.date, prev.start, prev.end)), (p) => p.amount);
     const spent = sum((expenses ?? []).filter((e) => within(e.date, start, end)), (e) => e.amountTTC);
     // Résultat hors taxes : la TVA collectée ou payée n'est ni un produit ni une charge
     const billedHT = sum(real.filter((i) => within(i.date, start, end)), (i) => computeTotals(i.items).netHT);
@@ -109,7 +110,7 @@ export default function DashboardPage() {
       return {
         label: formatDate(m, { month: 'short' }).replace('.', ''),
         billed: sum(real.filter((i) => within(i.date, m, nx)), (i) => computeTotals(i.items).totalTTC),
-        collected: sum((payments ?? []).filter((p) => within(p.date, m, nx)), (p) => p.amount),
+        collected: sum(activePayments(payments ?? []).filter((p) => within(p.date, m, nx)), (p) => p.amount),
       };
     });
 

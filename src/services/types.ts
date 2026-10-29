@@ -46,7 +46,8 @@ export interface PaymentService {
   list(params?: ListParams): Promise<Payment[]>;
   getByInvoice(invoiceId: string): Promise<Payment[]>;
   create(data: Omit<Payment, 'id' | 'createdAt'>): Promise<Payment>;
-  remove(id: string): Promise<void>;
+  /** Annule un paiement (motif obligatoire) : il reste dans l'historique et la facture est recalculée. */
+  cancel(id: string, reason: string): Promise<Payment>;
 }
 
 export interface ExpenseService {

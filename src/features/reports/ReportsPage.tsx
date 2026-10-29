@@ -29,6 +29,7 @@ import { Skeleton } from '@/components/feedback/Loading';
 import { printDocument } from '@/utils/print';
 import { exportData, type ExportColumn } from '@/utils/exportImport';
 import { amountDue } from '@/utils/invoice';
+import { activePayments } from '@/utils/payment';
 
 type ReportTab = 'overview' | 'sales' | 'clients' | 'products' | 'expenses';
 
@@ -131,7 +132,7 @@ export default function ReportsPage() {
     const totalBilled = filteredInvoices.reduce((s, i) => s + computeTotals(i.items).netHT, 0) - creditHT;
     const vatCollected = filteredInvoices.reduce((s, i) => s + computeTotals(i.items).vatAmount, 0) - creditVat;
     const vatDeductible = filteredExpenses.reduce((s, e) => s + (e.amountTTC - e.amountHT), 0);
-    const totalPaid = (payments ?? []).filter((p) => inRange(p.date, range)).reduce((s, p) => s + p.amount, 0);
+    const totalPaid = activePayments(payments ?? []).filter((p) => inRange(p.date, range)).reduce((s, p) => s + p.amount, 0);
     const totalRemaining = filteredInvoices.reduce((s, i) => s + amountDue(i), 0);
     const totalOverdue = filteredInvoices
       .filter((i) => i.status === 'retard')
@@ -156,7 +157,7 @@ export default function ReportsPage() {
     const prevExp = (expenses ?? []).filter((e) => inRange(e.date, previousRange));
     const prevCredit = (creditNotes ?? []).filter((cn) => cn.status === 'applique' && inRange(cn.date, previousRange)).reduce((s, cn) => s + computeTotals(cn.items).netHT, 0);
     const billed = prevInv.reduce((s, i) => s + computeTotals(i.items).netHT, 0) - prevCredit;
-    const paid = (payments ?? []).filter((p) => inRange(p.date, previousRange)).reduce((s, p) => s + p.amount, 0);
+    const paid = activePayments(payments ?? []).filter((p) => inRange(p.date, previousRange)).reduce((s, p) => s + p.amount, 0);
     const exp = prevExp.reduce((s, e) => s + e.amountHT, 0);
     return { billed, paid, exp, result: billed - exp };
   }, [invoices, expenses, payments, creditNotes, previousRange]);
@@ -178,7 +179,7 @@ export default function ReportsPage() {
         const d = new Date(inv.date);
         return d.getFullYear() === m.getFullYear() && d.getMonth() === m.getMonth();
       });
-      const monthPay = (payments ?? []).filter((p) => {
+      const monthPay = activePayments(payments ?? []).filter((p) => {
         const d = new Date(p.date);
         return d.getFullYear() === m.getFullYear() && d.getMonth() === m.getMonth();
       });
