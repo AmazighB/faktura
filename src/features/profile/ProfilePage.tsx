@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { User, Mail, Shield, Check, KeyRound, LogOut, Bell, Palette } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { User, Mail, Shield, Check, KeyRound, LogOut, Bell, Palette, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader, PageContent } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -13,10 +13,14 @@ import { useApp } from '@/app/providers/AppContext';
 import { useConfirm } from '@/app/providers/ConfirmContext';
 import { userRoleLabels } from '@/utils/labels';
 import { cn } from '@/utils/cn';
+import { ChangePasswordDialog } from '@/components/ui/ChangePasswordDialog';
+import { useAsync } from '@/hooks/useAsync';
+import { services } from '@/services';
+import { AUTO_LOCK_MINUTES } from '@/utils/security';
 
 export default function ProfilePage() {
   const { push } = useToast();
-  const { user, logout } = useAuth();
+  const { user, logout, lock, refreshUser } = useAuth();
   const { theme, setTheme, locale, setLocale } = useApp();
   const confirm = useConfirm();
   const navigate = useNavigate();
@@ -25,11 +29,29 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [notifEmail, setNotifEmail] = useState(true);
   const [notifOverdue, setNotifOverdue] = useState(true);
+  const [pwdOpen, setPwdOpen] = useState(false);
+
+  // Préférences enregistrées sur le compte
+  const { data: record } = useAsync(() => (user ? services.auth.getUser(user.id) : Promise.resolve(null)), [user?.id]);
+  useEffect(() => {
+    if (!record) return;
+    setNotifEmail(record.preferences?.notifyEmail ?? true);
+    setNotifOverdue(record.preferences?.notifyOverdue ?? true);
+  }, [record]);
 
   const handleSave = async () => {
+    if (!user) return;
     if (!name.trim() || !email.trim()) { push('error', 'Nom et email obligatoires'); return; }
     setSaving(true);
-    setTimeout(() => { setSaving(false); push('success', 'Profil mis à jour'); }, 600);
+    try {
+      await services.users.update(user.id, { name: name.trim(), email, preferences: { notifyEmail: notifEmail, notifyOverdue: notifOverdue } });
+      await refreshUser();
+      push('success', 'Profil mis à jour');
+    } catch (e) {
+      push('error', e instanceof Error ? e.message : 'Enregistrement impossible');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -54,7 +76,7 @@ export default function ProfilePage() {
                 <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{name || '—'}</h2>
                 <Badge className="bg-accent-100 text-accent-700 dark:bg-accent-900/30 dark:text-accent-300">{userRoleLabels[user?.role ?? 'employe']}</Badge>
                 <p className="flex items-center gap-1 text-xs text-gray-400"><Mail className="h-3 w-3" /> {email || '—'}</p>
-                <Button variant="outline" size="sm" className="mt-1 w-full" onClick={() => push('info', 'Mot de passe', 'Un email de réinitialisation sera envoyé')}>
+                <Button variant="outline" size="sm" className="mt-1 w-full" onClick={() => setPwdOpen(true)}>
                   <KeyRound className="h-3.5 w-3.5" /> Mot de passe
                 </Button>
               </div>
@@ -89,6 +111,15 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* Sécurité */}
+          <Card className="mt-4 flex flex-wrap items-center justify-between gap-3 p-4">
+            <div className="flex items-center gap-2">
+              <Lock className="h-4 w-4 text-gray-400" />
+              <p className="text-sm text-gray-500">Votre session se verrouille automatiquement après {AUTO_LOCK_MINUTES} minutes d'inactivité.</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => lock('manual')}><Lock className="h-3.5 w-3.5" /> Verrouiller maintenant</Button>
+          </Card>
+
           {/* Logout — compact single row */}
           <Card className="mt-4 flex items-center justify-between border-red-200 p-4 dark:border-red-900/30">
             <div className="flex items-center gap-2"><Shield className="h-4 w-4 text-red-400" /><p className="text-sm text-gray-500">Déconnexion de votre compte</p></div>
@@ -98,6 +129,7 @@ export default function ProfilePage() {
           </Card>
         </div>
       </PageContent>
+      {user && <ChangePasswordDialog open={pwdOpen} userId={user.id} onClose={() => setPwdOpen(false)} />}
     </div>
   );
 }

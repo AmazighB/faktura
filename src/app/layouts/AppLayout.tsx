@@ -4,11 +4,19 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { printElement } from '@/utils/print';
+import { LockScreen } from '@/components/layout/LockScreen';
+import { useAuth } from '@/app/providers/AuthContext';
+import { useIdleLock } from '@/hooks/useIdleLock';
+import { cn } from '@/utils/cn';
 
 export function AppLayout() {
   const navigate = useNavigate();
   const go = useCallback((path: string) => navigate(path), [navigate]);
   const { pathname } = useLocation();
+  const { user, locked, lock } = useAuth();
+
+  // Verrouillage automatique après 10 minutes d'inactivité (délai : utils/security.ts)
+  useIdleLock(!!user && !locked, () => lock('auto'));
 
   const shortcuts = useMemo(
     () => [
@@ -56,10 +64,12 @@ export function AppLayout() {
     ],
     [go, pathname],
   );
-  useKeyboardShortcuts(shortcuts);
+  // Session verrouillée : aucun raccourci clavier actif
+  useKeyboardShortcuts(locked ? [] : shortcuts);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
+    <>
+    <div className={cn(locked ? 'hidden' : 'flex', 'h-screen overflow-hidden bg-gray-50 dark:bg-gray-950')} aria-hidden={locked}>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[300] focus:rounded-md focus:bg-accent-600 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white">
         Aller au contenu
       </a>
@@ -71,5 +81,7 @@ export function AppLayout() {
         </main>
       </div>
     </div>
+    {locked && <LockScreen />}
+    </>
   );
 }

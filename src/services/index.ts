@@ -9,6 +9,7 @@ import { paymentService } from '@/mocks/paymentService';
 import { expenseService } from '@/mocks/expenseService';
 import { supplierService } from '@/mocks/supplierService';
 import { userService, activityLogService, settingsService, notificationService, backupService } from '@/mocks/miscServices';
+import { authService } from '@/mocks/authService';
 
 // Currently backed by mock implementations.
 // To switch to a Rust/Tauri backend later, replace each mock with a RustXxxService
@@ -30,6 +31,7 @@ function withPersistence<T extends object>(service: T): T {
 }
 
 export const services: AppServices = {
+  auth: withPersistence(authService),
   clients: withPersistence(clientService),
   products: withPersistence(productService),
   quotes: withPersistence(quoteService),

@@ -2,6 +2,10 @@ import type { User, ActivityLog, Settings, Notification, BackupRecord } from '@/
 import type { UserService, ActivityLogService, SettingsService, NotificationService, BackupService } from '@/services/types';
 import { mockUsers, mockActivityLogs, mockNotifications, mockBackups, defaultSettings } from '@/mocks/data';
 import { delay, uid, clone, persistentStore, persistentValue } from '@/mocks/helpers';
+import { createCredential, removeCredential } from '@/mocks/credentials';
+import { validatePassword } from '@/utils/password';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 class MockUserService implements UserService {
   private usersStore = persistentStore<User>('users', mockUsers);
@@ -12,22 +16,64 @@ class MockUserService implements UserService {
     return delay([...this.users]);
   }
 
-  async create(data: Omit<User, 'id' | 'createdAt'>): Promise<User> {
-    const user: User = { ...data, id: uid('u'), createdAt: new Date().toISOString() };
+  private assertEmailFree(email: string, exceptId?: string) {
+    if (!EMAIL_RE.test(email)) throw new Error('Adresse email invalide.');
+    if (this.users.some((x) => x.id !== exceptId && x.email.toLowerCase() === email.toLowerCase())) {
+      throw new Error('Cette adresse email est déjà utilisée.');
+    }
+  }
+
+  /** Il doit toujours rester au moins un administrateur actif. */
+  private assertAdminRemains(before: User, after: User | null) {
+    const wasActiveAdmin = before.role === 'admin' && before.active;
+    const stillActiveAdmin = !!after && after.role === 'admin' && after.active;
+    if (wasActiveAdmin && !stillActiveAdmin) {
+      const others = this.users.some((x) => x.id !== before.id && x.role === 'admin' && x.active);
+      if (!others) throw new Error('Opération impossible : il doit rester au moins un administrateur actif.');
+    }
+  }
+
+  async create(data: Omit<User, 'id' | 'createdAt'>, password: string): Promise<User> {
+    const email = data.email.trim().toLowerCase();
+    this.assertEmailFree(email);
+    const weak = validatePassword(password);
+    if (weak) throw new Error(weak);
+    const user: User = { ...data, name: data.name.trim(), email, id: uid('u'), createdAt: new Date().toISOString() };
+    await createCredential(user.id, password);
     this.users.unshift(user);
     return delay(user);
   }
 
   async update(id: string, data: Partial<User>): Promise<User> {
-    const idx = this.users.findIndex((u) => u.id === id);
+    const idx = this.users.findIndex((x) => x.id === id);
     if (idx === -1) throw new Error('Utilisateur introuvable');
-    this.users[idx] = { ...this.users[idx], ...data };
-    return delay(this.users[idx]);
+    const before = this.users[idx];
+    const next: User = { ...before, ...data, id: before.id, createdAt: before.createdAt };
+    if (data.email !== undefined) {
+      next.email = data.email.trim().toLowerCase();
+      this.assertEmailFree(next.email, id);
+    }
+    this.assertAdminRemains(before, next);
+    this.users[idx] = next;
+    return delay(next);
   }
 
   async remove(id: string): Promise<void> {
-    this.users = this.users.filter((u) => u.id !== id);
+    const target = this.users.find((x) => x.id === id);
+    if (target) this.assertAdminRemains(target, null);
+    this.users = this.users.filter((x) => x.id !== id);
+    removeCredential(id);
     return delay(undefined);
+  }
+
+  // ── Accès réservé au service d'authentification ──
+  _internalList(): User[] {
+    return [...this.users];
+  }
+
+  _touchLogin(id: string): void {
+    const idx = this.users.findIndex((x) => x.id === id);
+    if (idx !== -1) this.users[idx] = { ...this.users[idx], lastLoginAt: new Date().toISOString() };
   }
 }
 

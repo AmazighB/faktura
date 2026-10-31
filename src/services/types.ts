@@ -67,7 +67,8 @@ export interface SupplierService {
 
 export interface UserService {
   list(): Promise<User[]>;
-  create(data: Omit<User, 'id' | 'createdAt'>): Promise<User>;
+  /** Crée l'utilisateur avec son mot de passe initial (règle : 8 caractères, lettre + chiffre). */
+  create(data: Omit<User, 'id' | 'createdAt'>, password: string): Promise<User>;
   update(id: string, data: Partial<User>): Promise<User>;
   remove(id: string): Promise<void>;
 }
@@ -105,6 +106,7 @@ export interface CreditNoteService {
 }
 
 export interface AppServices {
+  auth: AuthService;
   clients: ClientService;
   products: ProductService;
   quotes: QuoteService;
@@ -118,4 +120,20 @@ export interface AppServices {
   settings: SettingsService;
   notifications: NotificationService;
   backups: BackupService;
+}
+
+export interface AuthSession {
+  user: User;
+}
+
+export interface AuthService {
+  /** Vérifie l'identifiant et le mot de passe. Lève une AuthError (identifiants, compte désactivé, trop d'essais). */
+  login(email: string, password: string): Promise<AuthSession>;
+  /** Vérifie le mot de passe de l'utilisateur connecté (déverrouillage de session). Lève une AuthError. */
+  verifyPassword(userId: string, password: string): Promise<void>;
+  changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void>;
+  /** Définit un nouveau mot de passe sans connaître l'ancien (réinitialisation par un administrateur). */
+  setPassword(userId: string, newPassword: string): Promise<void>;
+  /** Utilisateur courant tel que connu du serveur (null s'il n'existe plus). */
+  getUser(userId: string): Promise<User | null>;
 }

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Receipt, Eye, EyeOff, Mail, Lock, ArrowRight, Shield, Zap, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthContext';
@@ -6,26 +6,54 @@ import { useApp } from '@/app/providers/AppContext';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/utils/cn';
 
+type AuthErrorDetails = {
+  code: string;
+  message: string;
+  retryAfterSeconds?: number;
+  remainingAttempts?: number;
+};
+
+function isAuthError(err: unknown): err is AuthErrorDetails {
+  return typeof err === 'object' && err !== null &&
+    'code' in err && typeof err.code === 'string' &&
+    'message' in err && typeof err.message === 'string';
+}
+
 export default function LoginPage() {
   const { login } = useAuth();
   const { theme } = useApp();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('admin@factura.dz');
-  const [password, setPassword] = useState('demo');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(true);
+  const [retryIn, setRetryIn] = useState(0);
+  const [forgotOpen, setForgotOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (retryIn <= 0) return;
+    const id = setInterval(() => setRetryIn((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(id);
+  }, [retryIn > 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
+      await login(email, password, remember);
       navigate('/dashboard');
-    } catch {
-      setError('Identifiants incorrects. Réessayez.');
+    } catch (err) {
+      if (isAuthError(err)) {
+        if (err.code === 'too_many_attempts') setRetryIn(err.retryAfterSeconds ?? 60);
+        setError(err.code === 'invalid_credentials' && err.remainingAttempts !== undefined && err.remainingAttempts <= 2 ? `${err.message} ${err.remainingAttempts} essai(s) restant(s).` : err.message);
+      } else {
+        setError('Connexion impossible. Réessayez.');
+      }
+      setPassword('');
     } finally {
       setLoading(false);
     }
@@ -165,18 +193,26 @@ export default function LoginPage() {
               <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <input
                   type="checkbox"
-                  defaultChecked
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300 text-accent-600 focus:ring-accent-500 dark:border-gray-600 dark:bg-gray-800"
                 />
                 Se souvenir de moi
               </label>
               <button
                 type="button"
+                onClick={() => setForgotOpen((v) => !v)}
                 className="text-sm text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-gray-500"
               >
                 Mot de passe oublié ?
               </button>
             </div>
+
+            {forgotOpen && (
+              <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
+                Demandez à votre administrateur de réinitialiser votre mot de passe (Administration &gt; Utilisateurs).
+              </div>
+            )}
 
             {/* Error */}
             {error && (
@@ -189,7 +225,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               size="lg"
-              disabled={loading}
+              disabled={loading || retryIn > 0}
               className="w-full"
             >
               {loading ? (
@@ -199,20 +235,21 @@ export default function LoginPage() {
                 </>
               ) : (
                 <>
-                  Se connecter
-                  <ArrowRight className="h-4 w-4" />
+                  {retryIn > 0 ? `Réessayez dans ${retryIn} s` : 'Se connecter'}
+                  {retryIn === 0 && <ArrowRight className="h-4 w-4" />}
                 </>
               )}
             </Button>
           </form>
 
-          {/* Footer */}
-          <p className="mt-8 text-center text-xs text-gray-400 dark:text-gray-600">
-            Pas encore de compte ?{' '}
-            <button className="font-medium text-accent-600 hover:text-accent-700 dark:text-accent-400">
-              Contactez-nous
+          {/* Compte de démonstration (à retirer avec le backend) */}
+          <div className="mt-8 rounded-lg border border-dashed border-gray-300 p-3 text-center text-xs text-gray-500 dark:border-gray-700">
+            <p>Compte de démonstration : <span className="font-mono">admin@factura.dz</span> · <span className="font-mono">demo1234</span></p>
+            <button type="button" onClick={() => { setEmail('admin@factura.dz'); setPassword('demo1234'); setError(''); }} className="mt-1 font-medium text-accent-600 hover:underline dark:text-accent-400">
+              Utiliser ces identifiants
             </button>
-          </p>
+          </div>
+          <p className="mt-4 text-center text-xs text-gray-400 dark:text-gray-600">Votre accès est créé par l'administrateur de votre entreprise.</p>
         </div>
       </div>
 

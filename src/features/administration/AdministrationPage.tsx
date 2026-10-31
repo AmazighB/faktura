@@ -22,6 +22,11 @@ import { cn } from '@/utils/cn';
 import type { User, UserRole, ActivityLog, Permissions, PermissionModule, PermissionAction } from '@/types';
 import { formatDate } from '@/utils/format';
 import { resetPersistedData } from '@/mocks/helpers';
+import { PasswordInput } from '@/components/ui/PasswordInput';
+import { PasswordStrength } from '@/components/ui/PasswordStrength';
+import { ResetPasswordDialog } from '@/components/ui/ResetPasswordDialog';
+import { useAuth } from '@/app/providers/AuthContext';
+import { generatePassword, validatePassword } from '@/utils/password';
 
 const sections = [
   { key: 'users', label: 'Utilisateurs', icon: Users },
@@ -34,6 +39,9 @@ const emptyUser: Omit<User, 'id' | 'createdAt'> = { name: '', email: '', role: '
 export default function AdministrationPage() {
   const { push } = useToast();
   const confirm = useConfirm();
+  const { user: me } = useAuth();
+  const [newPassword, setNewPassword] = useState('');
+  const [resetTarget, setResetTarget] = useState<User | null>(null);
   const [section, setSection] = useState<string>('users');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
@@ -44,24 +52,25 @@ export default function AdministrationPage() {
   const { data: logs } = useAsync(() => services.activityLogs.list(), []);
   const { data: backups, reload: reloadBackups } = useAsync(() => services.backups.list(), []);
 
-  const openNew = () => { setEditing(null); setForm({ ...emptyUser, permissions: getRoleDefaultPermissions('employe') }); setDialogOpen(true); };
+  const openNew = () => { setEditing(null); setNewPassword(generatePassword()); setForm({ ...emptyUser, permissions: getRoleDefaultPermissions('employe') }); setDialogOpen(true); };
   const openEdit = (u: User) => { setEditing(u); setForm({ ...u, permissions: u.permissions ?? {} }); setDialogOpen(true); };
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.email.trim()) { push('error', 'Nom et email obligatoires'); return; }
+    if (!editing) {
+      const weak = validatePassword(newPassword);
+      if (weak) { push('error', weak); return; }
+    }
     setSaving(true);
     try {
       const dataToSave = form.role === 'admin' ? { ...form, permissions: getRoleDefaultPermissions('admin') } : form;
       if (editing) { await services.users.update(editing.id, dataToSave); push('success', 'Utilisateur modifié'); }
-      else { await services.users.create(dataToSave); push('success', 'Utilisateur créé'); }
+      else { await services.users.create(dataToSave, newPassword); push('success', 'Utilisateur créé', 'Transmettez-lui son mot de passe initial.'); }
       setDialogOpen(false); reload();
-    } catch { push('error', 'Erreur'); } finally { setSaving(false); }
+    } catch (e) { push('error', e instanceof Error ? e.message : 'Erreur'); } finally { setSaving(false); }
   };
 
-  const handleResetPassword = async (u: User) => {
-    const ok = await confirm({ title: 'Réinitialiser le mot de passe', message: `Réinitialiser le mot de passe de ${u.name} ?`, confirmLabel: 'Réinitialiser' });
-    if (ok) push('success', 'Mot de passe réinitialisé', `Email envoyé à ${u.email}`);
-  };
+  const handleResetPassword = (u: User) => setResetTarget(u);
 
   const togglePermission = (module: PermissionModule, action: PermissionAction, value: boolean) => {
     setForm((f) => {
@@ -97,7 +106,7 @@ export default function AdministrationPage() {
       <div className="flex justify-end gap-1">
         <Tooltip label="Modifier"><button onClick={() => openEdit(u)} className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800" aria-label="Modifier"><UserCog className="h-3.5 w-3.5" /></button></Tooltip>
         <Tooltip label="Mot de passe"><button onClick={() => handleResetPassword(u)} className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800" aria-label="Mot de passe"><KeyRound className="h-3.5 w-3.5" /></button></Tooltip>
-        <Tooltip label="Supprimer"><button onClick={async () => { const ok = await confirm({ title: 'Supprimer', message: `Supprimer ${u.name} ?`, confirmLabel: 'Supprimer', variant: 'danger' }); if (ok) { await services.users.remove(u.id); push('success', 'Utilisateur supprimé'); reload(); } }} className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20" aria-label="Supprimer"><Trash2 className="h-3.5 w-3.5" /></button></Tooltip>
+        <Tooltip label={u.id === me?.id ? 'Vous ne pouvez pas supprimer votre propre compte' : 'Supprimer'}><button disabled={u.id === me?.id} onClick={async () => { const ok = await confirm({ title: 'Supprimer', message: `Supprimer ${u.name} ?`, confirmLabel: 'Supprimer', variant: 'danger' }); if (ok) { try { await services.users.remove(u.id); push('success', 'Utilisateur supprimé'); reload(); } catch (e) { push('warning', 'Suppression impossible', e instanceof Error ? e.message : undefined); } } }} className="disabled:cursor-not-allowed disabled:opacity-40 rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20" aria-label="Supprimer"><Trash2 className="h-3.5 w-3.5" /></button></Tooltip>
       </div>
     )},
   ];
@@ -207,6 +216,7 @@ export default function AdministrationPage() {
         </div>
       </PageContent>
 
+      <ResetPasswordDialog user={resetTarget} onClose={() => setResetTarget(null)} />
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} title={editing ? "Modifier l'utilisateur" : 'Nouvel utilisateur'} size="lg" footer={<><Button variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button onClick={handleSave} disabled={saving}>{saving ? '...' : 'Enregistrer'}</Button></>}>
         <div className="max-h-[80vh] overflow-y-auto p-5">
           <div className="space-y-4">
@@ -214,6 +224,12 @@ export default function AdministrationPage() {
               <Field label="Nom" required><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
               <Field label="Email" required><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
             </div>
+            {!editing && (
+              <Field label="Mot de passe initial" required hint="Généré automatiquement : transmettez-le à l'utilisateur, qui pourra le changer depuis son profil.">
+                <PasswordInput value={newPassword} onChange={(e) => setNewPassword(e.target.value)} onGenerate={() => setNewPassword(generatePassword())} autoComplete="new-password" />
+                <PasswordStrength password={newPassword} />
+              </Field>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <Field label="Rôle"><Select value={form.role} onChange={(e) => { const role = e.target.value as UserRole; setForm({ ...form, role, permissions: getRoleDefaultPermissions(role) }); }}><option value="admin">Administrateur</option><option value="comptable">Comptable</option><option value="commercial">Commercial</option><option value="employe">Employé</option></Select></Field>
               <div className="flex items-end"><label className="flex items-center justify-between rounded-md border border-gray-200 px-4 py-2.5 dark:border-gray-800 w-full"><span className="text-sm">Compte actif</span><Switch checked={form.active} onChange={(v) => setForm({ ...form, active: v })} /></label></div>

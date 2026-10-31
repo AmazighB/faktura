@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import type { ConfirmOptions } from '@/components/feedback/ConfirmDialog';
 import { ConfirmDialog } from '@/components/feedback/ConfirmDialog';
 import { ConfirmContext } from './ConfirmContext';
@@ -7,10 +7,11 @@ import { ConfirmContext } from './ConfirmContext';
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [dialog, setDialog] = useState<(ConfirmOptions & { resolve: (v: boolean) => void }) | null>(null);
 
-  const confirm = (options: ConfirmOptions) =>
+  const confirm = useCallback((options: ConfirmOptions) =>
     new Promise<boolean>((resolve) => {
       setDialog({ ...options, resolve });
-    });
+    }), []);
+  const value = useMemo(() => ({ confirm }), [confirm]);
 
   const handleClose = (result: boolean) => {
     dialog?.resolve(result);
@@ -18,7 +19,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <ConfirmContext.Provider value={{ confirm }}>
+    <ConfirmContext.Provider value={value}>
       {children}
       {dialog && (
         <ConfirmDialog

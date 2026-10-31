@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, Sun, Moon, Monitor, Plus, FileText, Receipt, UserPlus, CreditCard, Menu, User, LogOut, ChevronDown, Zap, Package, Wallet, FileMinus, Maximize2, Minimize2 } from 'lucide-react';
+import { Search, Bell, Sun, Moon, Monitor, Plus, FileText, Receipt, UserPlus, CreditCard, Menu, User, LogOut, ChevronDown, Zap, Package, Wallet, FileMinus, Maximize2, Shrink, Lock, Expand } from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useApp } from '@/app/providers/AppContext';
 import { useAuth } from '@/app/providers/AuthContext';
@@ -10,6 +10,7 @@ import { CommandPalette } from '@/components/ui/CommandPalette';
 import { formatRelative } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import type { Notification } from '@/types';
+import { userRoleLabels } from '@/utils/labels';
 
 interface QuickAction {
   label: string;
@@ -31,7 +32,7 @@ const quickActions: QuickAction[] = [
 
 export function Header() {
   const { theme, setTheme, toggleMobileSidebar, moduleConfig } = useApp();
-  const { logout } = useAuth();
+  const { lock, logout, user } = useAuth();
   const navigate = useNavigate();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState('');
@@ -139,15 +140,6 @@ export function Header() {
         </button>
 
         <div className="ml-auto flex items-center gap-1">
-          <Tooltip label={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'} side="bottom">
-            <button
-              onClick={toggleFullscreen}
-              className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
-              aria-label={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
-            >
-              {isFullscreen ? <Minimize2 className="h-[18px] w-[18px]" /> : <Maximize2 className="h-[18px] w-[18px]" />}
-            </button>
-          </Tooltip>
           <div className="relative">
             <button
               onClick={() => setQuickOpen((v) => !v)}
@@ -184,16 +176,25 @@ export function Header() {
               </>
             )}
           </div>
+          <Tooltip label={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'} side="bottom">
+            <button
+              onClick={toggleFullscreen}
+              className="flex h-9 w-9 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+              aria-label={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
+            >
+              {isFullscreen ? <Shrink className="h-[18px] w-[18px]" /> : <Expand className="h-[18px] w-[18px]" />}
+            </button>
+          </Tooltip>
           <div className="relative">
             <Tooltip label="Changer le thème" side="bottom">
               <button
                 onClick={() => setThemeMenuOpen((v) => !v)}
-                className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="flex h-9 w-9 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
                 aria-label="Thème"
               >
                 {(() => {
                   const Icon = themeIcon;
-                  return <Icon className="h-4.5 w-4.5" style={{ width: 18, height: 18 }} />;
+                  return <Icon className="h-[18px] w-[18px]" />;
                 })()}
               </button>
             </Tooltip>
@@ -235,10 +236,10 @@ export function Header() {
             <Tooltip label={unreadCount > 0 ? `${unreadCount} notification(s) non lue(s)` : 'Notifications'} side="bottom">
               <button
                 onClick={() => setNotifOpen((v) => !v)}
-                className="relative rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="relative flex h-9 w-9 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
                 aria-label="Notifications"
               >
-                <Bell className="h-4.5 w-4.5" style={{ width: 18, height: 18 }} />
+                <Bell className="h-[18px] w-[18px]" />
                 {unreadCount > 0 && (
                   <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                     {unreadCount}
@@ -303,11 +304,11 @@ export function Header() {
               className="flex items-center gap-2 rounded-md py-1 pl-1 pr-2 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-100 text-sm font-semibold text-accent-700 dark:bg-accent-900/30 dark:text-accent-300">
-                A
+                {(user?.name ?? '?').charAt(0).toUpperCase()}
               </div>
               <div className="hidden text-left md:block">
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Administrateur</p>
-                <p className="text-xs text-gray-400">admin@factura.dz</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user?.name}</p>
+                <p className="text-xs text-gray-400">{user ? userRoleLabels[user.role] : ''}</p>
               </div>
               <ChevronDown className="hidden h-4 w-4 text-gray-400 md:block" />
             </button>
@@ -316,14 +317,20 @@ export function Header() {
                 <div className="fixed inset-0 z-10" onClick={() => setProfileOpen(false)} />
                 <div className="absolute right-0 z-20 mt-1 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-800 dark:bg-gray-900">
                   <div className="border-b border-gray-200 px-4 py-2.5 dark:border-gray-800">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Administrateur</p>
-                    <p className="text-xs text-gray-400">admin@factura.dz</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user?.name}</p>
+                    <p className="text-xs text-gray-400">{user?.email}</p>
                   </div>
                   <button
                     onClick={() => { setProfileOpen(false); navigate('/profile'); }}
                     className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                   >
                     <User className="h-4 w-4 text-gray-400" /> Mon profil
+                  </button>
+                  <button
+                    onClick={() => { setProfileOpen(false); lock('manual'); }}
+                    className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  >
+                    <Lock className="h-4 w-4 text-gray-400" /> Verrouiller la session
                   </button>
                   <div className="border-t border-gray-200 dark:border-gray-800" />
                   <button

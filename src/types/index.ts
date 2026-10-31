@@ -219,6 +219,8 @@ export interface User {
   role: UserRole;
   active: boolean;
   permissions?: Permissions;
+  /** Préférences personnelles (profil) */
+  preferences?: { notifyEmail?: boolean; notifyOverdue?: boolean };
   lastLoginAt?: string;
   createdAt: string;
 }
